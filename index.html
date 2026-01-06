@@ -22,7 +22,6 @@
         label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.75em; color: #666; }
         input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 1rem; -webkit-appearance: none; }
         
-        /* Power Controls */
         .power-ctrl { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
         .btn-step { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
         
@@ -33,6 +32,7 @@
         
         button.main-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; background: var(--primary); color: white; font-size: 1rem; transition: background 0.3s; }
         button.main-btn.editing { background: var(--edit); color: #333; }
+        .btn-cancel { display:none; width:100%; margin-top:5px; padding:10px; border:none; background:#ccc; border-radius:10px; font-weight:bold; cursor: pointer; }
         
         .history-card { background: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
         .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 15px; }
@@ -47,9 +47,6 @@
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
         .btn-action { padding: 10px 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.75em; color: white; display: flex; align-items: center; gap: 5px; }
         #backupAlert { color: #c62828; font-weight: bold; font-size: 0.85em; background: #ffebee; padding: 5px 15px; border-radius: 20px; border: 1px solid #ffcdd2; }
-        
-        /* Edit Mode Highlight */
-        .editing-row { background-color: #fff9c4; }
     </style>
 </head>
 <body>
@@ -85,7 +82,6 @@
 
     <div id="carica" class="form-section">
         <input type="hidden" id="editIndex" value="-1">
-        
         <div class="grid">
             <div style="grid-column: span 2;">
                 <label>Data Ricarica</label>
@@ -116,15 +112,23 @@
             <div><label>Diesel €/L</label><input type="number" id="pDiesel" step="0.001"></div>
         </div>
         <button id="btnSalva" class="main-btn" onclick="salvaRicarica()">💾 Salva Ricarica</button>
-        <button id="btnAnnulla" style="display:none; width:100%; margin-top:5px; padding:10px; border:none; background:#ccc; border-radius:10px; font-weight:bold;" onclick="annullaModifica()">❌ Annulla Modifica</button>
+        <button id="btnAnnulla" class="btn-cancel" onclick="annullaModifica()">❌ Annulla Modifica</button>
     </div>
 
     <div id="check" class="form-section">
+        <input type="hidden" id="editCheckIndex" value="-1">
+        <div class="grid">
+            <div style="grid-column: span 2;">
+                <label>Data Controllo</label>
+                <input type="date" id="chk_data">
+            </div>
+        </div>
         <div class="grid">
             <div><label>Km Totali</label><input type="number" id="chk_km"></div>
             <div><label>% Batteria</label><input type="number" id="chk_perc"></div>
         </div>
-        <button class="main-btn" style="background:var(--check)" onclick="salvaCheck()">📝 Registra Stato</button>
+        <button id="btnSalvaCheck" class="main-btn" style="background:var(--check)" onclick="salvaCheck()">📝 Registra Stato</button>
+        <button id="btnAnnullaCheck" class="btn-cancel" onclick="annullaModificaCheck()">❌ Annulla Modifica</button>
     </div>
 </div>
 
@@ -157,10 +161,9 @@
 
 <script>
 const CONFIG = { cap: 42.3, consTeorico: 15.5, efficienza: 0.86 };
-const DB_NAME = 'ev_byd_v23_pro';
+const DB_NAME = 'ev_byd_v24_check_edit';
 let myChart = null;
 
-// Gestione Tabs
 function openTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
@@ -168,7 +171,6 @@ function openTab(name) {
     document.getElementById(name).classList.add('active');
 }
 
-// Gestione Potenza
 function syncPower(val) {
     const v = parseFloat(val) || 0;
     document.getElementById('pKw_stima').value = v.toFixed(1);
@@ -183,7 +185,6 @@ function stepPower(delta) {
     syncPower(current);
 }
 
-// Calcolo Stima
 function calcolaStima() {
     const att = parseFloat(document.getElementById('s_att').value) || 0;
     const tar = parseFloat(document.getElementById('s_tar').value) || 0;
@@ -199,25 +200,19 @@ function calcolaStima() {
     }
 }
 
-// Calcolo Durata da Ora Inizio e Fine (supporta cavallo mezzanotte)
 function calcolaDurataString(start, end) {
     if (!start || !end) return "-";
     const [h1, m1] = start.split(':').map(Number);
     const [h2, m2] = end.split(':').map(Number);
     let min1 = h1 * 60 + m1;
     let min2 = h2 * 60 + m2;
-    
     let diff = min2 - min1;
-    if (diff < 0) diff += 1440; // Aggiunge 24h se fine < inizio
-    
-    const h = Math.floor(diff / 60);
-    const m = diff % 60;
-    return `${h}h ${m}m`;
+    if (diff < 0) diff += 1440;
+    return `${Math.floor(diff / 60)}h ${diff % 60}m`;
 }
 
-// Salva o Aggiorna Ricarica
+// --- GESTIONE RICARICA ---
 function salvaRicarica() {
-    // Dati Base
     const dataIn = document.getElementById('data_inserimento').valueAsDate || new Date();
     const att = parseFloat(document.getElementById('c_att').value);
     const tar = parseFloat(document.getElementById('c_tar').value);
@@ -225,121 +220,123 @@ function salvaRicarica() {
     const pL = parseFloat(document.getElementById('pLuce').value);
     const pD = parseFloat(document.getElementById('pDiesel').value);
     const pKw = document.getElementById('pKw_carica').value;
-    
-    // Dati Orari
     const tStart = document.getElementById('t_start').value;
     const tEnd = document.getElementById('t_end').value;
-    const durataStr = calcolaDurataString(tStart, tEnd);
 
-    if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti (Km, % Inizio o % Fine)!");
+    if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti!");
     
-    // Calcoli
     const kwhNetti = CONFIG.cap * (tar - att) / 100;
     const spesa = (kwhNetti / CONFIG.efficienza) * pL;
     const risp = (((kwhNetti / CONFIG.consTeorico) * 100) / 18 * pD) - spesa;
     
-    const nuovoRecord = {
+    const record = {
         tipo: 'RICARICA',
-        isoDate: dataIn.toISOString(), // Fondamentale per ordinamento
+        isoDate: dataIn.toISOString(),
         data: dataIn.toLocaleDateString('it-IT'),
         km: km,
         batt: att + "%→" + tar + "%",
-        c_att: att, c_tar: tar, // Salviamo raw per l'edit
+        c_att: att, c_tar: tar,
         t_start: tStart, t_end: tEnd,
-        tempo: durataStr,
+        tempo: calcolaDurataString(tStart, tEnd),
         prezzoLuce: pL, prezzoDiesel: pD, pKw: pKw,
         spesa: spesa, risp: risp, kwh: kwhNetti
     };
 
-    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    const editIndex = parseInt(document.getElementById('editIndex').value);
-
-    if (editIndex > -1) {
-        // MODIFICA ESISTENTE
-        // Poiché l'array potrebbe essere ordinato, dobbiamo trovare l'oggetto originale o usare l'indice con cautela.
-        // Qui usiamo l'indice relativo all'array ordinato visualizzato.
-        h[editIndex] = nuovoRecord;
-        alert("Ricarica aggiornata!");
-    } else {
-        // NUOVO INSERIMENTO
-        h.push(nuovoRecord);
-    }
-
-    // RIORDINA SEMPRE PER DATA (Dal più recente al più vecchio)
-    h.sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate));
-
-    localStorage.setItem(DB_NAME, JSON.stringify(h));
+    saveToDb(record, 'editIndex');
     localStorage.setItem('ev_pref_byd', JSON.stringify({pL, pD, pKw}));
-    
-    annullaModifica(); // Reset form
-    render();
+    annullaModifica();
 }
 
-// Salva Checkup
+// --- GESTIONE CHECK ---
 function salvaCheck() {
-    const km = parseFloat(document.getElementById('chk_km').value), perc = document.getElementById('chk_perc').value;
+    const dataIn = document.getElementById('chk_data').valueAsDate || new Date();
+    const km = parseFloat(document.getElementById('chk_km').value);
+    const perc = document.getElementById('chk_perc').value;
+    
     if (isNaN(km) || !perc) return alert("Dati incompleti!");
     
-    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    h.push({ 
+    const record = { 
         tipo: 'CHECK', 
-        isoDate: new Date().toISOString(),
-        data: new Date().toLocaleDateString('it-IT'),
-        km: km, batt: perc + "%", tempo: "-", spesa: 0, risp: 0, kwh: 0 
-    });
+        isoDate: dataIn.toISOString(),
+        data: dataIn.toLocaleDateString('it-IT'),
+        km: km, 
+        batt: perc + "%", 
+        chk_raw: perc, // Salvataggio raw per edit
+        tempo: "-", spesa: 0, risp: 0, kwh: 0 
+    };
     
+    saveToDb(record, 'editCheckIndex');
+    annullaModificaCheck();
+}
+
+// Funzione generica salvataggio
+function saveToDb(record, indexFieldId) {
+    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    const idx = parseInt(document.getElementById(indexFieldId).value);
+
+    if (idx > -1) { h[idx] = record; alert("Aggiornato!"); } 
+    else { h.push(record); }
+
     h.sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate));
     localStorage.setItem(DB_NAME, JSON.stringify(h));
     render();
 }
 
-// Funzione per caricare i dati nel form per la modifica
+// --- MODIFICA ---
 function preparaModifica(index) {
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     let r = h[index];
 
-    if (r.tipo !== 'RICARICA') return alert("Puoi modificare solo le ricariche.");
+    if (r.tipo === 'RICARICA') {
+        openTab('carica');
+        document.getElementById('data_inserimento').value = r.isoDate.split('T')[0];
+        document.getElementById('kmOdo').value = r.km;
+        if(r.c_att !== undefined) {
+            document.getElementById('c_att').value = r.c_att;
+            document.getElementById('c_tar').value = r.c_tar;
+        } else {
+            let parts = r.batt.replace('%','').split('→');
+            document.getElementById('c_att').value = parseFloat(parts[0]);
+            document.getElementById('c_tar').value = parseFloat(parts[1]);
+        }
+        document.getElementById('t_start').value = r.t_start || "";
+        document.getElementById('t_end').value = r.t_end || "";
+        document.getElementById('pKw_carica').value = r.pKw || document.getElementById('pKw_stima').value;
+        document.getElementById('pLuce').value = r.prezzoLuce || 0.25;
+        document.getElementById('pDiesel').value = r.prezzoDiesel || 1.8;
 
-    openTab('carica');
-    
-    // Popola Form
-    document.getElementById('data_inserimento').value = r.isoDate.split('T')[0];
-    document.getElementById('kmOdo').value = r.km;
-    
-    // Gestione % Batteria (Parsing o Raw)
-    if(r.c_att !== undefined) {
-        document.getElementById('c_att').value = r.c_att;
-        document.getElementById('c_tar').value = r.c_tar;
-    } else {
-        // Retrocompatibilità
-        let parts = r.batt.replace('%','').split('→');
-        document.getElementById('c_att').value = parseFloat(parts[0]);
-        document.getElementById('c_tar').value = parseFloat(parts[1]);
+        document.getElementById('editIndex').value = index;
+        toggleEditMode('btnSalva', 'btnAnnulla', true);
+    } 
+    else if (r.tipo === 'CHECK') {
+        openTab('check');
+        document.getElementById('chk_data').value = r.isoDate.split('T')[0];
+        document.getElementById('chk_km').value = r.km;
+        document.getElementById('chk_perc').value = r.chk_raw || r.batt.replace('%','');
+        
+        document.getElementById('editCheckIndex').value = index;
+        toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', true);
     }
-
-    document.getElementById('t_start').value = r.t_start || "";
-    document.getElementById('t_end').value = r.t_end || "";
-    document.getElementById('pKw_carica').value = r.pKw || document.getElementById('pKw_stima').value;
-    document.getElementById('pLuce').value = r.prezzoLuce || 0.25;
-    document.getElementById('pDiesel').value = r.prezzoDiesel || 1.8;
-
-    // UI Change
-    document.getElementById('editIndex').value = index;
-    const btn = document.getElementById('btnSalva');
-    btn.innerText = "🔄 Aggiorna Ricarica";
-    btn.classList.add('editing');
-    document.getElementById('btnAnnulla').style.display = 'block';
-    
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleEditMode(btnSaveId, btnCancelId, active) {
+    const btn = document.getElementById(btnSaveId);
+    const cancel = document.getElementById(btnCancelId);
+    if(active) {
+        btn.innerText = "🔄 Aggiorna";
+        btn.classList.add('editing');
+        cancel.style.display = 'block';
+    } else {
+        btn.innerText = (btnSaveId === 'btnSalva') ? "💾 Salva Ricarica" : "📝 Registra Stato";
+        btn.classList.remove('editing');
+        cancel.style.display = 'none';
+    }
 }
 
 function annullaModifica() {
     document.getElementById('editIndex').value = "-1";
-    document.getElementById('btnSalva').innerText = "💾 Salva Ricarica";
-    document.getElementById('btnSalva').classList.remove('editing');
-    document.getElementById('btnAnnulla').style.display = 'none';
-    
-    // Pulisci campi ma mantieni prezzi
+    toggleEditMode('btnSalva', 'btnAnnulla', false);
     document.getElementById('kmOdo').value = '';
     document.getElementById('c_att').value = '';
     document.getElementById('c_tar').value = '';
@@ -348,7 +345,15 @@ function annullaModifica() {
     document.getElementById('data_inserimento').valueAsDate = new Date();
 }
 
-// Render Tabella e Grafici
+function annullaModificaCheck() {
+    document.getElementById('editCheckIndex').value = "-1";
+    toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', false);
+    document.getElementById('chk_km').value = '';
+    document.getElementById('chk_perc').value = '';
+    document.getElementById('chk_data').valueAsDate = new Date();
+}
+
+// --- RENDER ---
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
@@ -358,9 +363,6 @@ function render() {
 
     let totalKwh = 0, totalKm = 0, runningRisp = 0, kwhAnno = 0;
     let chartLabels = [], chartDataRisp = [], chartDataTotal = [];
-
-    // Array è già ordinato decrescente (nuovi in alto). 
-    // Per il grafico (temporale) dobbiamo scorrerlo al contrario (vecchi -> nuovi)
     const reversedHistory = [...h].reverse();
 
     reversedHistory.forEach(r => { 
@@ -377,11 +379,7 @@ function render() {
     updateChart(chartLabels, chartDataRisp, chartDataTotal);
     
     tb.innerHTML = h.map((r, i) => {
-        // Calcolo delta KM rispetto al record SUCCESSIVO (che è quello precedente nel tempo)
         let delta = h[i+1] ? r.km - h[i+1].km : 0;
-        // Fix: se h[i+1] è più recente (errore inserimento) o se delta < 0, gestisci.
-        // Dato che ordiniamo per data, h[i+1] è cronologicamente prima.
-        
         if (delta > 0 && r.tipo === 'RICARICA') { totalKm += delta; totalKwh += r.kwh; }
         
         const pInfo = r.prezzoLuce ? `€${r.prezzoLuce} / €${r.prezzoDiesel}` : '-';
@@ -421,7 +419,6 @@ function updateChart(labels, dataRisp, dataTotal) {
 
 function esportaExcel() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    // Aggiunti campi nuovi Start/End al CSV
     let csv = "Data;Tipo;Km;Batt;Inizio;Fine;Tempo;Spesa;Risp;Kwh;PrezzoLuce;PrezzoDiesel;IsoDate\n";
     h.forEach(r => csv += `${r.data};${r.tipo};${r.km};${r.batt};${r.t_start||''};${r.t_end||''};${r.tempo||''};${r.spesa};${r.risp};${r.kwh};${r.prezzoLuce||''};${r.prezzoDiesel||''};${r.isoDate||''}\n`);
     const link = document.createElement("a");
@@ -439,7 +436,6 @@ function importaCSV(event) {
         let data = [];
         for(let i=1; i<rows.length; i++) {
             const c = rows[i].split(';'); if(c.length < 8) continue;
-            // Supporto importazione versioni precedenti
             data.push({ 
                 data: c[0], tipo: c[1], km: parseFloat(c[2]), batt: c[3], 
                 t_start: c[4]||'', t_end: c[5]||'', tempo: c[6], 
@@ -461,6 +457,7 @@ window.onload = () => {
     document.getElementById('pLuce').value = p.pL;
     document.getElementById('pDiesel').value = p.pD;
     document.getElementById('data_inserimento').valueAsDate = new Date();
+    document.getElementById('chk_data').valueAsDate = new Date();
     syncPower(p.pKw);
     render();
 };
