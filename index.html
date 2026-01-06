@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BYD Dolphin Monitor Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; }
+        body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 15px; color: #333; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 550px; width: 100%; margin-bottom: 20px; border-top: 5px solid var(--primary); box-sizing: border-box; }
+        h2 { color: var(--primary); text-align: center; margin: 0; font-size: 1.4rem; }
+        .model-badge { text-align: center; font-size: 0.75em; color: #888; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 12px; }
+        .tab { flex: 1; padding: 12px 5px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: none; color: #666; font-size: 0.8em; }
+        .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-section { display: none; }
+        .form-section.active { display: block; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.75em; color: #666; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 1rem; -webkit-appearance: none; }
+        
+        /* Power Controls */
+        .power-ctrl { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        .btn-step { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+        
+        .res-box { background: #e3f2fd; color: #1565c0; padding: 12px; border-radius: 12px; margin-top: 10px; border: 1px solid #bbdefb; }
+        .res-item { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 0.85em; }
+        .power-box { background: #fffde7; padding: 12px; border-radius: 12px; border: 1px solid #fbc02d; margin-bottom: 10px; }
+        .power-box label { color: #bc5100; font-weight: bold; }
+        
+        button.main-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; background: var(--primary); color: white; font-size: 1rem; transition: background 0.3s; }
+        button.main-btn.editing { background: var(--edit); color: #333; }
+        
+        .history-card { background: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 15px; }
+        .stat-small { background: #fff; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
+        .chart-container { width: 100%; height: 250px; margin-bottom: 20px; }
+        .table-wrapper { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8em; min-width: 950px; }
+        th { text-align: left; padding: 10px; background: #f8f9fa; border-bottom: 2px solid #eee; }
+        td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        
+        .actions-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .btn-action { padding: 10px 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.75em; color: white; display: flex; align-items: center; gap: 5px; }
+        #backupAlert { color: #c62828; font-weight: bold; font-size: 0.85em; background: #ffebee; padding: 5px 15px; border-radius: 20px; border: 1px solid #ffcdd2; }
+        
+        /* Edit Mode Highlight */
+        .editing-row { background-color: #fff9c4; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>BYD DOLPHIN</h2>
+    <div class="model-badge">Surf Boost | 42.3 kWh</div>
+    
+    <div class="tabs">
+        <button class="tab active" onclick="openTab('stima')">⏱️ Stima</button>
+        <button class="tab" onclick="openTab('carica')">🔌 Ricarica</button>
+        <button class="tab" onclick="openTab('check')">📝 Check-up</button>
+    </div>
+
+    <div id="stima" class="form-section active">
+        <div class="power-box">
+            <label>⚡ Potenza di Ricarica (kW)</label>
+            <div class="power-ctrl">
+                <button class="btn-step" onclick="stepPower(-0.1)">-</button>
+                <input type="number" id="pKw_stima" step="0.1" oninput="syncPower(this.value)" placeholder="Es: 2.3">
+                <button class="btn-step" onclick="stepPower(0.1)">+</button>
+            </div>
+        </div>
+        <div class="grid">
+            <div><label>% Attuale</label><input type="number" id="s_att" oninput="calcolaStima()"></div>
+            <div><label>% Target</label><input type="number" id="s_tar" oninput="calcolaStima()"></div>
+        </div>
+        <div class="res-box">
+            <div class="res-item"><span>Tempo stimato:</span> <b id="resTempo">-</b></div>
+            <div class="res-item"><span>Energia necessaria:</span> <b id="resKwhStima">0 kWh</b></div>
+        </div>
+    </div>
+
+    <div id="carica" class="form-section">
+        <input type="hidden" id="editIndex" value="-1">
+        
+        <div class="grid">
+            <div style="grid-column: span 2;">
+                <label>Data Ricarica</label>
+                <input type="date" id="data_inserimento">
+            </div>
+        </div>
+        <div class="grid">
+            <div style="grid-column: span 2;"><label>Km Totali Cruscotto</label><input type="number" id="kmOdo"></div>
+        </div>
+        <div class="grid">
+            <div><label>% Inizio</label><input type="number" id="c_att"></div>
+            <div><label>% Fine</label><input type="number" id="c_tar"></div>
+        </div>
+        <div class="grid">
+            <div><label>Ora Inizio</label><input type="time" id="t_start"></div>
+            <div><label>Ora Fine</label><input type="time" id="t_end"></div>
+        </div>
+        <div class="power-box">
+            <label>⚡ Potenza Usata (kW)</label>
+            <div class="power-ctrl">
+                <button class="btn-step" onclick="stepPower(-0.1)">-</button>
+                <input type="number" id="pKw_carica" step="0.1" oninput="syncPower(this.value)">
+                <button class="btn-step" onclick="stepPower(0.1)">+</button>
+            </div>
+        </div>
+        <div class="grid">
+            <div><label>Luce €/kWh</label><input type="number" id="pLuce" step="0.001"></div>
+            <div><label>Diesel €/L</label><input type="number" id="pDiesel" step="0.001"></div>
+        </div>
+        <button id="btnSalva" class="main-btn" onclick="salvaRicarica()">💾 Salva Ricarica</button>
+        <button id="btnAnnulla" style="display:none; width:100%; margin-top:5px; padding:10px; border:none; background:#ccc; border-radius:10px; font-weight:bold;" onclick="annullaModifica()">❌ Annulla Modifica</button>
+    </div>
+
+    <div id="check" class="form-section">
+        <div class="grid">
+            <div><label>Km Totali</label><input type="number" id="chk_km"></div>
+            <div><label>% Batteria</label><input type="number" id="chk_perc"></div>
+        </div>
+        <button class="main-btn" style="background:var(--check)" onclick="salvaCheck()">📝 Registra Stato</button>
+    </div>
+</div>
+
+<div class="history-card">
+    <div class="stats-summary">
+        <div class="stat-small"><small>SPESA TOT.</small><br><b id="totSpesa" style="color:var(--expense)">€ 0.00</b></div>
+        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--primary)">€ 0.00</b></div>
+        <div class="stat-small"><small id="labelAnnoKwh">kWh 2026</small><br><b id="totKwhAnno" style="color:var(--check)">0.0</b></div>
+        <div class="stat-small"><small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b></div>
+        <div class="stat-small"><small>kWh/100km</small><br><b id="avgConsumo" style="color:var(--consumption)">---</b></div>
+    </div>
+    <div class="chart-container"><canvas id="savingsChart"></canvas></div>
+    <div class="table-wrapper">
+        <table id="tabella">
+            <thead><tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>Carica</th><th>Orari</th><th>Durata</th><th>Prezzi</th><th>Spesa</th><th>Risp.</th><th>Azioni</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div class="actions-footer">
+        <div id="backupAlert">Ultimo Backup: Mai effettuato</div>
+        <div class="btn-group">
+            <button class="btn-action" style="background:#546e7a" onclick="window.print()">📄 PDF</button>
+            <button class="btn-action" style="background:var(--excel)" onclick="esportaExcel()">📊 Excel</button>
+            <button class="btn-action" style="background:var(--import)" onclick="document.getElementById('fileInput').click()">📥 Importa</button>
+            <input type="file" id="fileInput" style="display:none" accept=".csv" onchange="importaCSV(event)">
+            <button style="background:none; border:none; color:red; font-size:0.7em;" onclick="pulisci()">Reset DB</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const CONFIG = { cap: 42.3, consTeorico: 15.5, efficienza: 0.86 };
+const DB_NAME = 'ev_byd_v23_pro';
+let myChart = null;
+
+// Gestione Tabs
+function openTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById(name).classList.add('active');
+}
+
+// Gestione Potenza
+function syncPower(val) {
+    const v = parseFloat(val) || 0;
+    document.getElementById('pKw_stima').value = v.toFixed(1);
+    document.getElementById('pKw_carica').value = v.toFixed(1);
+    calcolaStima();
+}
+
+function stepPower(delta) {
+    const el = document.getElementById('pKw_stima');
+    let current = parseFloat(el.value) || 1.4;
+    current = Math.max(0.1, current + delta);
+    syncPower(current);
+}
+
+// Calcolo Stima
+function calcolaStima() {
+    const att = parseFloat(document.getElementById('s_att').value) || 0;
+    const tar = parseFloat(document.getElementById('s_tar').value) || 0;
+    const kw = parseFloat(document.getElementById('pKw_stima').value) || 1.4;
+    if (tar > att) {
+        const kwh = CONFIG.cap * (tar - att) / 100;
+        const oreDec = (kwh / kw) / CONFIG.efficienza;
+        document.getElementById('resKwhStima').innerText = kwh.toFixed(1) + " kWh";
+        document.getElementById('resTempo').innerText = Math.floor(oreDec) + "h " + Math.round((oreDec % 1)*60) + "m";
+    } else {
+        document.getElementById('resKwhStima').innerText = "0 kWh";
+        document.getElementById('resTempo').innerText = "-";
+    }
+}
+
+// Calcolo Durata da Ora Inizio e Fine (supporta cavallo mezzanotte)
+function calcolaDurataString(start, end) {
+    if (!start || !end) return "-";
+    const [h1, m1] = start.split(':').map(Number);
+    const [h2, m2] = end.split(':').map(Number);
+    let min1 = h1 * 60 + m1;
+    let min2 = h2 * 60 + m2;
+    
+    let diff = min2 - min1;
+    if (diff < 0) diff += 1440; // Aggiunge 24h se fine < inizio
+    
+    const h = Math.floor(diff / 60);
+    const m = diff % 60;
+    return `${h}h ${m}m`;
+}
+
+// Salva o Aggiorna Ricarica
+function salvaRicarica() {
+    // Dati Base
+    const dataIn = document.getElementById('data_inserimento').valueAsDate || new Date();
+    const att = parseFloat(document.getElementById('c_att').value);
+    const tar = parseFloat(document.getElementById('c_tar').value);
+    const km = parseFloat(document.getElementById('kmOdo').value);
+    const pL = parseFloat(document.getElementById('pLuce').value);
+    const pD = parseFloat(document.getElementById('pDiesel').value);
+    const pKw = document.getElementById('pKw_carica').value;
+    
+    // Dati Orari
+    const tStart = document.getElementById('t_start').value;
+    const tEnd = document.getElementById('t_end').value;
+    const durataStr = calcolaDurataString(tStart, tEnd);
+
+    if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti (Km, % Inizio o % Fine)!");
+    
+    // Calcoli
+    const kwhNetti = CONFIG.cap * (tar - att) / 100;
+    const spesa = (kwhNetti / CONFIG.efficienza) * pL;
+    const risp = (((kwhNetti / CONFIG.consTeorico) * 100) / 18 * pD) - spesa;
+    
+    const nuovoRecord = {
+        tipo: 'RICARICA',
+        isoDate: dataIn.toISOString(), // Fondamentale per ordinamento
+        data: dataIn.toLocaleDateString('it-IT'),
+        km: km,
+        batt: att + "%→" + tar + "%",
+        c_att: att, c_tar: tar, // Salviamo raw per l'edit
+        t_start: tStart, t_end: tEnd,
+        tempo: durataStr,
+        prezzoLuce: pL, prezzoDiesel: pD, pKw: pKw,
+        spesa: spesa, risp: risp, kwh: kwhNetti
+    };
+
+    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    const editIndex = parseInt(document.getElementById('editIndex').value);
+
+    if (editIndex > -1) {
+        // MODIFICA ESISTENTE
+        // Poiché l'array potrebbe essere ordinato, dobbiamo trovare l'oggetto originale o usare l'indice con cautela.
+        // Qui usiamo l'indice relativo all'array ordinato visualizzato.
+        h[editIndex] = nuovoRecord;
+        alert("Ricarica aggiornata!");
+    } else {
+        // NUOVO INSERIMENTO
+        h.push(nuovoRecord);
+    }
+
+    // RIORDINA SEMPRE PER DATA (Dal più recente al più vecchio)
+    h.sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate));
+
+    localStorage.setItem(DB_NAME, JSON.stringify(h));
+    localStorage.setItem('ev_pref_byd', JSON.stringify({pL, pD, pKw}));
+    
+    annullaModifica(); // Reset form
+    render();
+}
+
+// Salva Checkup
+function salvaCheck() {
+    const km = parseFloat(document.getElementById('chk_km').value), perc = document.getElementById('chk_perc').value;
+    if (isNaN(km) || !perc) return alert("Dati incompleti!");
+    
+    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    h.push({ 
+        tipo: 'CHECK', 
+        isoDate: new Date().toISOString(),
+        data: new Date().toLocaleDateString('it-IT'),
+        km: km, batt: perc + "%", tempo: "-", spesa: 0, risp: 0, kwh: 0 
+    });
+    
+    h.sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate));
+    localStorage.setItem(DB_NAME, JSON.stringify(h));
+    render();
+}
+
+// Funzione per caricare i dati nel form per la modifica
+function preparaModifica(index) {
+    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    let r = h[index];
+
+    if (r.tipo !== 'RICARICA') return alert("Puoi modificare solo le ricariche.");
+
+    openTab('carica');
+    
+    // Popola Form
+    document.getElementById('data_inserimento').value = r.isoDate.split('T')[0];
+    document.getElementById('kmOdo').value = r.km;
+    
+    // Gestione % Batteria (Parsing o Raw)
+    if(r.c_att !== undefined) {
+        document.getElementById('c_att').value = r.c_att;
+        document.getElementById('c_tar').value = r.c_tar;
+    } else {
+        // Retrocompatibilità
+        let parts = r.batt.replace('%','').split('→');
+        document.getElementById('c_att').value = parseFloat(parts[0]);
+        document.getElementById('c_tar').value = parseFloat(parts[1]);
+    }
+
+    document.getElementById('t_start').value = r.t_start || "";
+    document.getElementById('t_end').value = r.t_end || "";
+    document.getElementById('pKw_carica').value = r.pKw || document.getElementById('pKw_stima').value;
+    document.getElementById('pLuce').value = r.prezzoLuce || 0.25;
+    document.getElementById('pDiesel').value = r.prezzoDiesel || 1.8;
+
+    // UI Change
+    document.getElementById('editIndex').value = index;
+    const btn = document.getElementById('btnSalva');
+    btn.innerText = "🔄 Aggiorna Ricarica";
+    btn.classList.add('editing');
+    document.getElementById('btnAnnulla').style.display = 'block';
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function annullaModifica() {
+    document.getElementById('editIndex').value = "-1";
+    document.getElementById('btnSalva').innerText = "💾 Salva Ricarica";
+    document.getElementById('btnSalva').classList.remove('editing');
+    document.getElementById('btnAnnulla').style.display = 'none';
+    
+    // Pulisci campi ma mantieni prezzi
+    document.getElementById('kmOdo').value = '';
+    document.getElementById('c_att').value = '';
+    document.getElementById('c_tar').value = '';
+    document.getElementById('t_start').value = '';
+    document.getElementById('t_end').value = '';
+    document.getElementById('data_inserimento').valueAsDate = new Date();
+}
+
+// Render Tabella e Grafici
+function render() {
+    const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    const tb = document.querySelector('#tabella tbody');
+    const annoCorrente = new Date().getFullYear();
+    document.getElementById('labelAnnoKwh').innerText = "kWh " + annoCorrente;
+    document.getElementById('backupAlert').innerText = "Ultimo Backup: " + (localStorage.getItem('lastBackupDate') || "Mai effettuato");
+
+    let totalKwh = 0, totalKm = 0, runningRisp = 0, kwhAnno = 0;
+    let chartLabels = [], chartDataRisp = [], chartDataTotal = [];
+
+    // Array è già ordinato decrescente (nuovi in alto). 
+    // Per il grafico (temporale) dobbiamo scorrerlo al contrario (vecchi -> nuovi)
+    const reversedHistory = [...h].reverse();
+
+    reversedHistory.forEach(r => { 
+        if(r.tipo === 'RICARICA') { 
+            runningRisp += r.risp; 
+            chartLabels.push(r.data); 
+            chartDataRisp.push(r.risp.toFixed(2)); 
+            chartDataTotal.push(runningRisp.toFixed(2)); 
+            let a = r.isoDate ? new Date(r.isoDate).getFullYear() : (r.data ? parseInt(r.data.split('/')[2]) : null);
+            if (a === annoCorrente) kwhAnno += (r.kwh / CONFIG.efficienza);
+        } 
+    });
+
+    updateChart(chartLabels, chartDataRisp, chartDataTotal);
+    
+    tb.innerHTML = h.map((r, i) => {
+        // Calcolo delta KM rispetto al record SUCCESSIVO (che è quello precedente nel tempo)
+        let delta = h[i+1] ? r.km - h[i+1].km : 0;
+        // Fix: se h[i+1] è più recente (errore inserimento) o se delta < 0, gestisci.
+        // Dato che ordiniamo per data, h[i+1] è cronologicamente prima.
+        
+        if (delta > 0 && r.tipo === 'RICARICA') { totalKm += delta; totalKwh += r.kwh; }
+        
+        const pInfo = r.prezzoLuce ? `€${r.prezzoLuce} / €${r.prezzoDiesel}` : '-';
+        const orari = r.t_start ? `${r.t_start}<br>${r.t_end}` : '-';
+        
+        return `
+        <tr>
+            <td>${r.data}</td>
+            <td><span style="background:${r.tipo==='RICARICA'?'#2e7d32':'#6a1b9a'}; color:white; padding:3px 6px; border-radius:5px; font-size:0.7em;">${r.tipo}</span></td>
+            <td><b>${r.km}</b></td>
+            <td style="color:var(--accent)">${delta>0?'+'+delta:''}</td>
+            <td>${r.batt}</td>
+            <td style="font-size:0.8em; color:#555;">${orari}</td>
+            <td>${r.tempo || '-'}</td>
+            <td style="color:#666; font-size:0.8em;">${pInfo}</td>
+            <td style="color:var(--expense)">${r.spesa>0?'€'+r.spesa.toFixed(2):'-'}</td>
+            <td style="color:var(--primary)">${r.risp>0?'€'+r.risp.toFixed(2):'-'}</td>
+            <td>
+                <button style="border:none; background:none; cursor:pointer; font-size:1.1em;" onclick="preparaModifica(${i})">✏️</button>
+                <button style="border:none; background:none; color:red; cursor:pointer; font-size:1.1em;" onclick="elimina(${i})">🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('totSpesa').innerText = "€ " + h.reduce((a,b)=>a+b.spesa,0).toFixed(2);
+    document.getElementById('totRisp').innerText = "€ " + h.reduce((a,b)=>a+b.risp,0).toFixed(2);
+    document.getElementById('totKwhAnno').innerText = kwhAnno.toFixed(1);
+    document.getElementById('totKmReali').innerText = h[0]?.km || 0;
+    document.getElementById('avgConsumo').innerText = totalKm > 0 ? ((totalKwh / totalKm) * 100).toFixed(1) : "---";
+}
+
+function updateChart(labels, dataRisp, dataTotal) {
+    const ctx = document.getElementById('savingsChart').getContext('2d');
+    if (myChart) myChart.destroy();
+    myChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Totale Accumulato (€)', data: dataTotal, borderColor: '#005eb8', backgroundColor: 'rgba(0, 94, 184, 0.1)', fill: true, tension: 0.3, yAxisID: 'y' }, { label: 'Risp. Singolo (€)', data: dataRisp, borderColor: '#e65100', borderDash: [5, 5], tension: 0.3, yAxisID: 'y1' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { position: 'left' }, y1: { position: 'right', grid: { drawOnChartArea: false } } } } });
+}
+
+function esportaExcel() {
+    const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    // Aggiunti campi nuovi Start/End al CSV
+    let csv = "Data;Tipo;Km;Batt;Inizio;Fine;Tempo;Spesa;Risp;Kwh;PrezzoLuce;PrezzoDiesel;IsoDate\n";
+    h.forEach(r => csv += `${r.data};${r.tipo};${r.km};${r.batt};${r.t_start||''};${r.t_end||''};${r.tempo||''};${r.spesa};${r.risp};${r.kwh};${r.prezzoLuce||''};${r.prezzoDiesel||''};${r.isoDate||''}\n`);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    link.download = `dolphin_pro_db.csv`; link.click();
+    const ora = new Date().toLocaleString('it-IT');
+    localStorage.setItem('lastBackupDate', ora);
+    render();
+}
+
+function importaCSV(event) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const rows = e.target.result.split('\n');
+        let data = [];
+        for(let i=1; i<rows.length; i++) {
+            const c = rows[i].split(';'); if(c.length < 8) continue;
+            // Supporto importazione versioni precedenti
+            data.push({ 
+                data: c[0], tipo: c[1], km: parseFloat(c[2]), batt: c[3], 
+                t_start: c[4]||'', t_end: c[5]||'', tempo: c[6], 
+                spesa: parseFloat(c[7]), risp: parseFloat(c[8]), kwh: parseFloat(c[9]), 
+                prezzoLuce: parseFloat(c[10]||0), prezzoDiesel: parseFloat(c[11]||0), isoDate: c[12]||null 
+            });
+        }
+        data.sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate));
+        localStorage.setItem(DB_NAME, JSON.stringify(data)); render();
+    };
+    reader.readAsText(event.target.files[0]);
+}
+
+function elimina(i) { if(confirm("Eliminare definitivamente?")) { let h = JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME, JSON.stringify(h)); render(); } }
+function pulisci() { if(confirm("ATTENZIONE: Cancellare tutto il database?")) { localStorage.removeItem(DB_NAME); render(); } }
+
+window.onload = () => {
+    const p = JSON.parse(localStorage.getItem('ev_pref_byd')) || {pL: 0.25, pD: 1.80, pKw: 1.4};
+    document.getElementById('pLuce').value = p.pL;
+    document.getElementById('pDiesel').value = p.pD;
+    document.getElementById('data_inserimento').valueAsDate = new Date();
+    syncPower(p.pKw);
+    render();
+};
+</script>
+</body>
+</html>
