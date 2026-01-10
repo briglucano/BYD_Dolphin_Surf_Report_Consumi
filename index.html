@@ -356,7 +356,7 @@ function annullaModificaCheck() {
     document.getElementById('chk_data').valueAsDate = new Date();
 }
 
-// --- RENDER (FIX CONSUMO) ---
+// --- RENDER (ALGORITMO CORRETTO "DELTA SOC") ---
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
@@ -370,7 +370,6 @@ function render() {
     let chartLabels = [], chartDataSpesa = [], chartDataRisp = [];
     let totSpesa = 0, totRisp = 0;
     
-    // Usiamo una copia invertita per il grafico cronologico
     [...h].reverse().forEach(r => { 
         if(r.tipo === 'RICARICA') { 
             totSpesa += r.spesa;
@@ -385,23 +384,45 @@ function render() {
     });
     updateChart(chartLabels, chartDataSpesa, chartDataRisp);
 
-    // --- 2. Calcolo Consumo Medio "Globale" ---
-    // Logica: Totale kWh caricati (esclusa la prima ricarica di setup) / Delta Km totali monitorati
+    // --- 2. Calcolo Consumo Medio "Reale" ---
+    // Logica: Somma kWh caricati + Differenza batteria tra Inizio e Fine
     let avgConsumo = "---";
-    if (h.length > 1) {
-        let maxKm = h[0].km; // Più recente
-        let minKm = h[h.length - 1].km; // Più vecchio
-        let dist = maxKm - minKm;
-        
-        let sumKwh = 0;
-        // Somma kWh di tutte le ricariche ECCETTO quella più vecchia (se è una ricarica)
-        // Perché la ricarica più vecchia copre km fatti PRIMA dell'inizio del log.
-        for (let i = 0; i < h.length - 1; i++) {
-            if (h[i].tipo === 'RICARICA') sumKwh += h[i].kwh;
+    const ricariche = h.filter(r => r.tipo === 'RICARICA');
+    
+    if (ricariche.length >= 2) {
+        // La [0] è la più recente, l'ultima [n] è la più vecchia
+        const recent = ricariche[0];
+        const oldest = ricariche[ricariche.length - 1];
+
+        const dist = recent.km - oldest.km;
+
+        // 1. Somma di tutte le energie caricate ESCLUSA la più vecchia (che copriva il passato)
+        let energyAdded = 0;
+        for (let i = 0; i < ricariche.length - 1; i++) {
+             energyAdded += ricariche[i].kwh;
         }
 
-        if (dist > 0 && sumKwh > 0) {
-            avgConsumo = ((sumKwh / dist) * 100).toFixed(1);
+        // 2. Calcolo della differenza di serbatoio
+        // Se alla fine ho più batteria dell'inizio, devo sottrarre quel surplus dal consumo
+        // Se alla fine ne ho meno, vuol dire che ho consumato anche quella, quindi la aggiungo
+        // Formula: Delta = (PercentualeFinaleVecchia - PercentualeFinaleNuova)
+        
+        // Es. Partito con 100% (Oldest), Arrivato con 20% (Recent). Ho consumato un 80% extra.
+        // Es. Partito con 20%, Arrivato con 100%. Ho "immagazzinato" un 80% che non ho usato.
+        
+        if (recent.c_tar !== undefined && oldest.c_tar !== undefined) {
+            const percStart = oldest.c_tar; // Come era messa l'auto dopo la prima carica
+            const percEnd = recent.c_tar;   // Come è messa l'auto ora
+            
+            const batteryDeltaKwh = ((percStart - percEnd) / 100) * CONFIG.cap;
+            const totalEnergyUsed = energyAdded + batteryDeltaKwh;
+
+            if (dist > 0 && totalEnergyUsed > 0) {
+                avgConsumo = ((totalEnergyUsed / dist) * 100).toFixed(1);
+            }
+        } else {
+            // Fallback se dati vecchi senza c_tar
+            if (dist > 0 && energyAdded > 0) avgConsumo = ((energyAdded / dist) * 100).toFixed(1);
         }
     }
 
