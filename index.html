@@ -269,8 +269,6 @@ function salvaCheck() {
     annullaModificaCheck();
 }
 
-// --- FIX ORDINAMENTO (V2) ---
-// Logica: 1. Ordina per KM decrescente. 2. A parità di KM, ordina per DATA decrescente.
 function saveToDb(record, indexFieldId) {
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const idx = parseInt(document.getElementById(indexFieldId).value);
@@ -278,13 +276,8 @@ function saveToDb(record, indexFieldId) {
     if (idx > -1) { h[idx] = record; alert("Aggiornato!"); } 
     else { h.push(record); }
 
-    // ALGORITMO DI ORDINAMENTO DOPPIO
     h.sort((a, b) => {
-        // Prima differenza sui KM
-        if (b.km !== a.km) {
-            return b.km - a.km; 
-        }
-        // Se i KM sono uguali, differenza sulla DATA (New Date gestisce le stringhe ISO)
+        if (b.km !== a.km) return b.km - a.km; 
         return new Date(b.isoDate) - new Date(a.isoDate);
     });
     
@@ -363,7 +356,7 @@ function annullaModificaCheck() {
     document.getElementById('chk_data').valueAsDate = new Date();
 }
 
-// --- RENDER ---
+// --- RENDER (FIX CONSUMO) ---
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
@@ -371,14 +364,17 @@ function render() {
     document.getElementById('labelAnnoKwh').innerText = "kWh " + annoCorrente;
     document.getElementById('backupAlert').innerText = "Ultimo Backup: " + (localStorage.getItem('lastBackupDate') || "Mai effettuato");
 
-    let totalKwh = 0, totalKm = 0, kwhAnno = 0;
+    let kwhAnno = 0;
     
-    // Preparazione Dati Grafico
+    // --- 1. Calcolo Dati Grafico e Totali Monetari ---
     let chartLabels = [], chartDataSpesa = [], chartDataRisp = [];
-    const reversedHistory = [...h].reverse(); 
-
-    reversedHistory.forEach(r => { 
+    let totSpesa = 0, totRisp = 0;
+    
+    // Usiamo una copia invertita per il grafico cronologico
+    [...h].reverse().forEach(r => { 
         if(r.tipo === 'RICARICA') { 
+            totSpesa += r.spesa;
+            totRisp += r.risp;
             chartLabels.push(r.data); 
             chartDataSpesa.push(r.spesa.toFixed(2));
             chartDataRisp.push(r.risp.toFixed(2));
@@ -387,13 +383,31 @@ function render() {
             if (a === annoCorrente) kwhAnno += (r.kwh / CONFIG.efficienza);
         } 
     });
-
     updateChart(chartLabels, chartDataSpesa, chartDataRisp);
-    
+
+    // --- 2. Calcolo Consumo Medio "Globale" ---
+    // Logica: Totale kWh caricati (esclusa la prima ricarica di setup) / Delta Km totali monitorati
+    let avgConsumo = "---";
+    if (h.length > 1) {
+        let maxKm = h[0].km; // Più recente
+        let minKm = h[h.length - 1].km; // Più vecchio
+        let dist = maxKm - minKm;
+        
+        let sumKwh = 0;
+        // Somma kWh di tutte le ricariche ECCETTO quella più vecchia (se è una ricarica)
+        // Perché la ricarica più vecchia copre km fatti PRIMA dell'inizio del log.
+        for (let i = 0; i < h.length - 1; i++) {
+            if (h[i].tipo === 'RICARICA') sumKwh += h[i].kwh;
+        }
+
+        if (dist > 0 && sumKwh > 0) {
+            avgConsumo = ((sumKwh / dist) * 100).toFixed(1);
+        }
+    }
+
+    // --- 3. Generazione Tabella ---
     tb.innerHTML = h.map((r, i) => {
         let delta = h[i+1] ? r.km - h[i+1].km : 0;
-        if (delta > 0 && r.tipo === 'RICARICA') { totalKm += delta; totalKwh += r.kwh; }
-        
         const pInfo = r.prezzoLuce ? `€${r.prezzoLuce} / €${r.prezzoDiesel}` : '-';
         const orari = r.t_start ? `${r.t_start}<br>${r.t_end}` : '-';
         
@@ -416,14 +430,14 @@ function render() {
         </tr>`;
     }).join('');
 
-    document.getElementById('totSpesa').innerText = "€ " + h.reduce((a,b)=>a+b.spesa,0).toFixed(2);
-    document.getElementById('totRisp').innerText = "€ " + h.reduce((a,b)=>a+b.risp,0).toFixed(2);
+    // --- 4. Aggiornamento Dashboard ---
+    document.getElementById('totSpesa').innerText = "€ " + totSpesa.toFixed(2);
+    document.getElementById('totRisp').innerText = "€ " + totRisp.toFixed(2);
     document.getElementById('totKwhAnno').innerText = kwhAnno.toFixed(1);
     document.getElementById('totKmReali').innerText = h[0]?.km || 0;
-    document.getElementById('avgConsumo').innerText = totalKm > 0 ? ((totalKwh / totalKm) * 100).toFixed(1) : "---";
+    document.getElementById('avgConsumo').innerText = avgConsumo;
 }
 
-// --- GRAFICO ---
 function updateChart(labels, dataSpesa, dataRisp) {
     const ctx = document.getElementById('savingsChart').getContext('2d');
     if (myChart) myChart.destroy();
@@ -501,7 +515,6 @@ function importaCSV(event) {
                 prezzoLuce: parseFloat(c[10]||0), prezzoDiesel: parseFloat(c[11]||0), isoDate: c[12]||null 
             });
         }
-        // ORDINAMENTO DOPPIO ANCHE IN IMPORT
         data.sort((a, b) => {
             if (b.km !== a.km) return b.km - a.km;
             return new Date(b.isoDate) - new Date(a.isoDate);
