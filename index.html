@@ -269,8 +269,8 @@ function salvaCheck() {
     annullaModificaCheck();
 }
 
-// --- FIX ORDINAMENTO ---
-// Modificata la logica di ordinamento: Priorità ai KM (che non mentono mai), poi alla data.
+// --- FIX ORDINAMENTO (V2) ---
+// Logica: 1. Ordina per KM decrescente. 2. A parità di KM, ordina per DATA decrescente.
 function saveToDb(record, indexFieldId) {
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const idx = parseInt(document.getElementById(indexFieldId).value);
@@ -278,9 +278,15 @@ function saveToDb(record, indexFieldId) {
     if (idx > -1) { h[idx] = record; alert("Aggiornato!"); } 
     else { h.push(record); }
 
-    // NUOVO ORDINAMENTO: Ordina per Km decrescente.
-    // Se inserisci una data vecchia ma i km sono giusti, l'ordine sarà corretto.
-    h.sort((a, b) => b.km - a.km);
+    // ALGORITMO DI ORDINAMENTO DOPPIO
+    h.sort((a, b) => {
+        // Prima differenza sui KM
+        if (b.km !== a.km) {
+            return b.km - a.km; 
+        }
+        // Se i KM sono uguali, differenza sulla DATA (New Date gestisce le stringhe ISO)
+        return new Date(b.isoDate) - new Date(a.isoDate);
+    });
     
     localStorage.setItem(DB_NAME, JSON.stringify(h));
     render();
@@ -369,11 +375,10 @@ function render() {
     
     // Preparazione Dati Grafico
     let chartLabels = [], chartDataSpesa = [], chartDataRisp = [];
-    const reversedHistory = [...h].reverse(); // Ordine cronologico per il grafico
+    const reversedHistory = [...h].reverse(); 
 
     reversedHistory.forEach(r => { 
         if(r.tipo === 'RICARICA') { 
-            // Grafico: Mostriamo ogni singola ricarica
             chartLabels.push(r.data); 
             chartDataSpesa.push(r.spesa.toFixed(2));
             chartDataRisp.push(r.risp.toFixed(2));
@@ -387,7 +392,6 @@ function render() {
     
     tb.innerHTML = h.map((r, i) => {
         let delta = h[i+1] ? r.km - h[i+1].km : 0;
-        // Fix: Calcolo km totali e kwh basato su delta reale
         if (delta > 0 && r.tipo === 'RICARICA') { totalKm += delta; totalKwh += r.kwh; }
         
         const pInfo = r.prezzoLuce ? `€${r.prezzoLuce} / €${r.prezzoDiesel}` : '-';
@@ -416,13 +420,10 @@ function render() {
     document.getElementById('totRisp').innerText = "€ " + h.reduce((a,b)=>a+b.risp,0).toFixed(2);
     document.getElementById('totKwhAnno').innerText = kwhAnno.toFixed(1);
     document.getElementById('totKmReali').innerText = h[0]?.km || 0;
-    // Calcolo consumo medio basato sui Km delta effettivi
     document.getElementById('avgConsumo').innerText = totalKm > 0 ? ((totalKwh / totalKm) * 100).toFixed(1) : "---";
 }
 
-// --- FIX GRAFICO ---
-// Grafico Stacked Bar: Molto più intuitivo.
-// Mostra Costo (Rosso) + Risparmio (Verde) = Quanto avresti speso in Diesel.
+// --- GRAFICO ---
 function updateChart(labels, dataSpesa, dataRisp) {
     const ctx = document.getElementById('savingsChart').getContext('2d');
     if (myChart) myChart.destroy();
@@ -500,8 +501,11 @@ function importaCSV(event) {
                 prezzoLuce: parseFloat(c[10]||0), prezzoDiesel: parseFloat(c[11]||0), isoDate: c[12]||null 
             });
         }
-        // Applichiamo lo stesso ordinamento per KM anche nell'import
-        data.sort((a, b) => b.km - a.km);
+        // ORDINAMENTO DOPPIO ANCHE IN IMPORT
+        data.sort((a, b) => {
+            if (b.km !== a.km) return b.km - a.km;
+            return new Date(b.isoDate) - new Date(a.isoDate);
+        });
         localStorage.setItem(DB_NAME, JSON.stringify(data)); render();
     };
     reader.readAsText(event.target.files[0]);
