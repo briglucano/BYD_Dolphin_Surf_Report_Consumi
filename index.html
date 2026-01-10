@@ -26,7 +26,9 @@
         .btn-step { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
         
         .res-box { background: #e3f2fd; color: #1565c0; padding: 12px; border-radius: 12px; margin-top: 10px; border: 1px solid #bbdefb; }
-        .res-item { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 0.85em; }
+        .res-item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; }
+        .res-highlight { border-top: 1px solid #bbdefb; padding-top: 5px; margin-top: 5px; font-weight: bold; color: var(--accent); }
+        
         .power-box { background: #fffde7; padding: 12px; border-radius: 12px; border: 1px solid #fbc02d; margin-bottom: 10px; }
         .power-box label { color: #bc5100; font-weight: bold; }
         
@@ -74,9 +76,19 @@
             <div><label>% Attuale</label><input type="number" id="s_att" oninput="calcolaStima()"></div>
             <div><label>% Target</label><input type="number" id="s_tar" oninput="calcolaStima()"></div>
         </div>
+        <div class="grid">
+             <div style="grid-column: span 2;">
+                <label>🔔 Orario Prelievo Auto (Opzionale)</label>
+                <input type="time" id="s_orario_fine" oninput="calcolaStima()">
+             </div>
+        </div>
         <div class="res-box">
-            <div class="res-item"><span>Tempo stimato:</span> <b id="resTempo">-</b></div>
             <div class="res-item"><span>Energia necessaria:</span> <b id="resKwhStima">0 kWh</b></div>
+            <div class="res-item"><span>Tempo stimato:</span> <b id="resTempo">-</b></div>
+            <div class="res-item res-highlight">
+                <span>COLLEGA ALLE ORE:</span> 
+                <b id="resOrarioAvvio" style="font-size:1.3em;">--:--</b>
+            </div>
         </div>
     </div>
 
@@ -185,18 +197,40 @@ function stepPower(delta) {
     syncPower(current);
 }
 
+// --- FUNZIONE STIMA AGGIORNATA ---
 function calcolaStima() {
     const att = parseFloat(document.getElementById('s_att').value) || 0;
     const tar = parseFloat(document.getElementById('s_tar').value) || 0;
     const kw = parseFloat(document.getElementById('pKw_stima').value) || 1.4;
+    
+    // Reset output
+    document.getElementById('resKwhStima').innerText = "0 kWh";
+    document.getElementById('resTempo').innerText = "-";
+    document.getElementById('resOrarioAvvio').innerText = "--:--";
+
     if (tar > att) {
+        // Calcolo Durata
         const kwh = CONFIG.cap * (tar - att) / 100;
         const oreDec = (kwh / kw) / CONFIG.efficienza;
+        const totalMinutes = oreDec * 60;
+        
         document.getElementById('resKwhStima').innerText = kwh.toFixed(1) + " kWh";
         document.getElementById('resTempo').innerText = Math.floor(oreDec) + "h " + Math.round((oreDec % 1)*60) + "m";
-    } else {
-        document.getElementById('resKwhStima').innerText = "0 kWh";
-        document.getElementById('resTempo').innerText = "-";
+
+        // Calcolo Orario Avvio
+        const orarioFine = document.getElementById('s_orario_fine').value;
+        if (orarioFine) {
+            const [h, m] = orarioFine.split(':').map(Number);
+            const now = new Date();
+            // Data target fissata a oggi con l'ora scelta
+            const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+            // Sottrai i millisecondi della durata
+            const startDate = new Date(targetDate.getTime() - (totalMinutes * 60000));
+            
+            const hStart = String(startDate.getHours()).padStart(2, '0');
+            const mStart = String(startDate.getMinutes()).padStart(2, '0');
+            document.getElementById('resOrarioAvvio').innerText = `${hStart}:${mStart}`;
+        }
     }
 }
 
@@ -356,7 +390,7 @@ function annullaModificaCheck() {
     document.getElementById('chk_data').valueAsDate = new Date();
 }
 
-// --- RENDER (ALGORITMO CORRETTO "DELTA SOC") ---
+// --- RENDER ---
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
@@ -366,7 +400,6 @@ function render() {
 
     let kwhAnno = 0;
     
-    // --- 1. Calcolo Dati Grafico e Totali Monetari ---
     let chartLabels = [], chartDataSpesa = [], chartDataRisp = [];
     let totSpesa = 0, totRisp = 0;
     
@@ -384,49 +417,29 @@ function render() {
     });
     updateChart(chartLabels, chartDataSpesa, chartDataRisp);
 
-    // --- 2. Calcolo Consumo Medio "Reale" ---
-    // Logica: Somma kWh caricati + Differenza batteria tra Inizio e Fine
     let avgConsumo = "---";
     const ricariche = h.filter(r => r.tipo === 'RICARICA');
-    
     if (ricariche.length >= 2) {
-        // La [0] è la più recente, l'ultima [n] è la più vecchia
         const recent = ricariche[0];
         const oldest = ricariche[ricariche.length - 1];
-
         const dist = recent.km - oldest.km;
-
-        // 1. Somma di tutte le energie caricate ESCLUSA la più vecchia (che copriva il passato)
         let energyAdded = 0;
         for (let i = 0; i < ricariche.length - 1; i++) {
              energyAdded += ricariche[i].kwh;
         }
-
-        // 2. Calcolo della differenza di serbatoio
-        // Se alla fine ho più batteria dell'inizio, devo sottrarre quel surplus dal consumo
-        // Se alla fine ne ho meno, vuol dire che ho consumato anche quella, quindi la aggiungo
-        // Formula: Delta = (PercentualeFinaleVecchia - PercentualeFinaleNuova)
-        
-        // Es. Partito con 100% (Oldest), Arrivato con 20% (Recent). Ho consumato un 80% extra.
-        // Es. Partito con 20%, Arrivato con 100%. Ho "immagazzinato" un 80% che non ho usato.
-        
         if (recent.c_tar !== undefined && oldest.c_tar !== undefined) {
-            const percStart = oldest.c_tar; // Come era messa l'auto dopo la prima carica
-            const percEnd = recent.c_tar;   // Come è messa l'auto ora
-            
+            const percStart = oldest.c_tar;
+            const percEnd = recent.c_tar;   
             const batteryDeltaKwh = ((percStart - percEnd) / 100) * CONFIG.cap;
             const totalEnergyUsed = energyAdded + batteryDeltaKwh;
-
             if (dist > 0 && totalEnergyUsed > 0) {
                 avgConsumo = ((totalEnergyUsed / dist) * 100).toFixed(1);
             }
         } else {
-            // Fallback se dati vecchi senza c_tar
             if (dist > 0 && energyAdded > 0) avgConsumo = ((energyAdded / dist) * 100).toFixed(1);
         }
     }
 
-    // --- 3. Generazione Tabella ---
     tb.innerHTML = h.map((r, i) => {
         let delta = h[i+1] ? r.km - h[i+1].km : 0;
         const pInfo = r.prezzoLuce ? `€${r.prezzoLuce} / €${r.prezzoDiesel}` : '-';
@@ -451,7 +464,6 @@ function render() {
         </tr>`;
     }).join('');
 
-    // --- 4. Aggiornamento Dashboard ---
     document.getElementById('totSpesa').innerText = "€ " + totSpesa.toFixed(2);
     document.getElementById('totRisp').innerText = "€ " + totRisp.toFixed(2);
     document.getElementById('totKwhAnno').innerText = kwhAnno.toFixed(1);
