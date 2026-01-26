@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>BYD Dolphin Monitor Pro v2.1</title>
+    <title>BYD Dolphin Monitor v3.0 (Fix)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; --save: #2e7d32; }
@@ -57,7 +57,6 @@
         .actions-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; }
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
         .btn-action { padding: 10px 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.75em; color: white; display: flex; align-items: center; gap: 5px; }
-        #backupAlert { color: #c62828; font-weight: bold; font-size: 0.85em; background: #ffebee; padding: 5px 15px; border-radius: 20px; border: 1px solid #ffcdd2; }
     </style>
 </head>
 <body>
@@ -174,7 +173,9 @@
         <div class="stat-small"><small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b></div>
         <div class="stat-small"><small>kWh/100km</small><br><b id="avgConsumo" style="color:var(--consumption)">---</b></div>
     </div>
+    
     <div class="chart-container"><canvas id="savingsChart"></canvas></div>
+    
     <div class="table-wrapper">
         <table id="tabella">
             <thead><tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>Carica</th><th>Orari</th><th>Durata</th><th>Prezzi</th><th>Spesa</th><th>Risp.</th><th>Azioni</th></tr></thead>
@@ -182,8 +183,8 @@
         </table>
         <button id="btnShowMore" class="show-more-btn" onclick="toggleShowAll()">⬇️ Mostra tutto lo storico</button>
     </div>
+    
     <div class="actions-footer">
-        <div id="backupAlert">Ultimo Backup: Mai effettuato</div>
         <div class="btn-group">
             <button class="btn-action" style="background:#546e7a" onclick="window.print()">📄 PDF</button>
             <button class="btn-action" style="background:var(--excel)" onclick="esportaExcel()">📊 Excel</button>
@@ -199,6 +200,28 @@ const CONFIG = { cap: 43.2, consTeorico: 15.5, efficienza: 0.86 };
 const DB_NAME = 'ev_byd_v24_check_edit';
 let myChart = null;
 let showAllHistory = false;
+
+// 1. AUTO-RIPARAZIONE DATI (Risolve il problema dei totali sballati)
+function sanificaDatabase() {
+    let raw = localStorage.getItem(DB_NAME);
+    if(!raw) return;
+    let h = JSON.parse(raw);
+    let corretto = false;
+    
+    h = h.map(r => {
+        // Converte stringhe in numeri (es: "10.50" -> 10.50)
+        // Se c'è una virgola (stile italiano), la sostituisce col punto
+        if (typeof r.spesa === 'string') { r.spesa = parseFloat(r.spesa.replace(',','.')) || 0; corretto = true; }
+        if (typeof r.risp === 'string') { r.risp = parseFloat(r.risp.replace(',','.')) || 0; corretto = true; }
+        if (typeof r.kwh === 'string') { r.kwh = parseFloat(r.kwh.replace(',','.')) || 0; corretto = true; }
+        return r;
+    });
+
+    if(corretto) {
+        console.log("Database riparato: numeri convertiti correttamente.");
+        localStorage.setItem(DB_NAME, JSON.stringify(h));
+    }
+}
 
 function openTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -252,14 +275,21 @@ function salvaRicarica() {
     const luogo = document.querySelector('input[name="luogoRicarica"]:checked').value;
 
     if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti!");
+    
+    // Calcoli Matematici
     const kwhNetti = CONFIG.cap * (tar - att) / 100;
     const spesa = (kwhNetti / CONFIG.efficienza) * pL;
+    // Calcolo risparmio: (Costo Equivalente Diesel) - (Costo Elettrico)
     const risp = (((kwhNetti / CONFIG.consTeorico) * 100) / 18 * pD) - spesa;
     
+    // IMPORTANTE: Salviamo spesa e risp come NUMERI (non stringhe)
     saveToDb({
         tipo: 'RICARICA', luogo, isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'),
         km, batt: att + "%→" + tar + "%", c_att: att, c_tar: tar, t_start: tStart, t_end: tEnd,
-        tempo: (tStart && tEnd) ? calcolaDurata(tStart, tEnd) : "-", prezzoLuce: pL, prezzoDiesel: pD, pKw, spesa, risp, kwh: kwhNetti
+        tempo: (tStart && tEnd) ? calcolaDurata(tStart, tEnd) : "-", prezzoLuce: pL, prezzoDiesel: pD, pKw, 
+        spesa: parseFloat(spesa.toFixed(2)), // Forza numero
+        risp: parseFloat(risp.toFixed(2)),   // Forza numero
+        kwh: parseFloat(kwhNetti.toFixed(2)) // Forza numero
     }, 'editIndex');
     annullaModifica();
 }
@@ -288,36 +318,73 @@ function saveToDb(rec, id) {
 }
 
 function render() {
+    // Esegui pulizia preliminare
+    sanificaDatabase();
+
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
     let kwhAn = 0, tSpesa = 0, tRisp = 0, tCasa = 0, tCol = 0;
     let cLabs = [], cSpesa = [], cRisp = [];
+    const annoCorrente = new Date().getFullYear();
+    document.getElementById('labelAnnoKwh').innerText = "kWh " + annoCorrente;
 
-    [...h].reverse().forEach(r => {
+    // Calcolo Totali - Usiamo il loop completo originale per sommare tutto
+    // Nota: L'array 'h' è ordinato per km decrescente (dal più recente al più vecchio)
+    // Per i calcoli non importa l'ordine, ma per il grafico si.
+    
+    // Creiamo una copia per il grafico in ordine cronologico
+    let hCronologico = [...h].sort((a,b) => new Date(a.isoDate) - new Date(b.isoDate));
+    
+    // Calcoliamo i totali ciclando su TUTTO lo storico
+    h.forEach(r => {
         if(r.tipo === 'RICARICA') {
-            tSpesa += r.spesa; tRisp += r.risp;
-            if((r.luogo||'DOMESTICA')==='DOMESTICA') tCasa += r.spesa; else tCol += r.spesa;
-            cLabs.push(r.data); cSpesa.push(r.spesa.toFixed(2)); cRisp.push(r.risp.toFixed(2));
-            if(new Date(r.isoDate).getFullYear() === new Date().getFullYear()) kwhAn += (r.kwh/CONFIG.efficienza);
+            // Forziamo la conversione a numero per sicurezza
+            let s = parseFloat(r.spesa) || 0;
+            let rs = parseFloat(r.risp) || 0;
+            let k = parseFloat(r.kwh) || 0;
+
+            tSpesa += s;
+            tRisp += rs;
+            
+            if((r.luogo || 'DOMESTICA') === 'DOMESTICA') tCasa += s; 
+            else tCol += s;
+            
+            let annoR = r.isoDate ? new Date(r.isoDate).getFullYear() : (r.data ? parseInt(r.data.split('/')[2]) : null);
+            if(annoR === annoCorrente) kwhAn += (k / CONFIG.efficienza);
         }
     });
 
+    // Prepariamo dati grafico (solo ricariche)
+    hCronologico.forEach(r => {
+        if (r.tipo === 'RICARICA') {
+            cLabs.push(r.data);
+            cSpesa.push(r.spesa);
+            cRisp.push(r.risp);
+        }
+    });
+
+    // Render Tabella
     const limit = showAllHistory ? h.length : 10;
     tb.innerHTML = h.slice(0, limit).map((r, i) => {
-        let delta = h[i+1] ? r.km - h[i+1].km : 0;
+        let delta = h[i+1] ? (r.km - h[i+1].km) : 0;
         let colorR = r.risp >= 0 ? 'var(--save)' : 'var(--expense)';
         let badge = `<span style="background:${r.tipo==='CHECK'?'#6a1b9a':(r.luogo==='COLONNINA'?'#e65100':'#2e7d32')}; color:white; padding:3px 6px; border-radius:5px; font-size:0.7em;">${r.tipo==='CHECK'?'📝':'🔌'} ${r.luogo||r.tipo}</span>`;
+        
+        // Formattazione sicura
+        let valSpesa = (parseFloat(r.spesa)||0).toFixed(2);
+        let valRisp = (parseFloat(r.risp)||0).toFixed(2);
         
         return `<tr>
             <td>${r.data}</td><td>${badge}</td><td><b>${r.km}</b></td><td style="color:var(--accent)">${delta>0?'+'+delta:''}</td>
             <td>${r.batt}</td><td>${r.t_start||'-'}<br>${r.t_end||'-'}</td><td>${r.tempo||'-'}</td>
             <td style="font-size:0.8em">€${r.prezzoLuce||'0'} / €${r.prezzoDiesel||'0'}</td>
-            <td style="color:var(--expense)">${r.spesa>0?'€'+r.spesa.toFixed(2):'-'}</td>
-            <td style="color:${colorR}; font-weight:bold;">${r.tipo==='RICARICA'?'€'+r.risp.toFixed(2):'-'}</td>
+            <td style="color:var(--expense)">${r.spesa>0?'€'+valSpesa:'-'}</td>
+            <td style="color:${colorR}; font-weight:bold;">${r.tipo==='RICARICA'?'€'+valRisp:'-'}</td>
             <td><button onclick="preparaModifica(${i})" style="border:none;background:none;cursor:pointer">✏️</button><button onclick="elimina(${i})" style="border:none;background:none;color:red;cursor:pointer">🗑️</button></td>
         </tr>`;
     }).join('');
 
+    // Aggiornamento DOM Totali
     document.getElementById('totSpesa').innerText = "€ " + tSpesa.toFixed(2);
     document.getElementById('totSpesaCasa').innerText = "€ " + tCasa.toFixed(2);
     document.getElementById('totSpesaCol').innerText = "€ " + tCol.toFixed(2);
@@ -325,8 +392,16 @@ function render() {
     document.getElementById('totRisp').style.color = tRisp >= 0 ? 'var(--save)' : 'var(--expense)';
     document.getElementById('totKwhAnno').innerText = kwhAn.toFixed(1);
     document.getElementById('totKmReali').innerText = h[0]?.km || 0;
-    document.getElementById('btnShowMore').style.display = h.length > 10 ? 'block' : 'none';
-    document.getElementById('btnShowMore').innerText = showAllHistory ? "⬆️ Riduci elenco" : "⬇️ Mostra tutto (" + h.length + ")";
+    
+    // Gestione Bottone "Mostra Altro"
+    const btnMore = document.getElementById('btnShowMore');
+    if(h.length > 10) {
+        btnMore.style.display = 'block';
+        btnMore.innerText = showAllHistory ? "⬆️ Riduci elenco" : "⬇️ Mostra tutto (" + h.length + ")";
+    } else {
+        btnMore.style.display = 'none';
+    }
+
     updateChart(cLabs, cSpesa, cRisp);
 }
 
@@ -370,7 +445,7 @@ function pulisci() { if(confirm("Cancellare tutto?")) { localStorage.removeItem(
 
 function esportaExcel() {
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    let csv = "Data;Tipo;Luogo;Km;Batt;Spesa;Risparmio;Kwh\n" + h.map(r => `${r.data};${r.tipo};${r.luogo||'CASA'};${r.km};${r.batt};${r.spesa.toFixed(2)};${r.risp.toFixed(2)};${r.kwh.toFixed(2)}`).join('\n');
+    let csv = "Data;Tipo;Luogo;Km;Batt;Spesa;Risparmio;Kwh\n" + h.map(r => `${r.data};${r.tipo};${r.luogo||'CASA'};${r.km};${r.batt};${(parseFloat(r.spesa)||0).toFixed(2)};${(parseFloat(r.risp)||0).toFixed(2)};${(parseFloat(r.kwh)||0).toFixed(2)}`).join('\n');
     let link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
     link.download = "byd_report.csv"; link.click();
 }
@@ -379,15 +454,29 @@ function importaCSV(e) {
     let reader = new FileReader();
     reader.onload = (ev) => {
         let rows = ev.target.result.split('\n').slice(1);
-        let data = rows.map(row => {
-            let c = row.split(';');
-            return { data: c[0], tipo: c[1], luogo: c[2], km: parseFloat(c[3]), batt: c[4], spesa: parseFloat(c[5]), risp: parseFloat(c[6]), kwh: parseFloat(c[7]), isoDate: new Date().toISOString() };
-        });
+        let data = rows
+            .filter(row => row.trim() !== "") // Ignora righe vuote
+            .map(row => {
+                let c = row.split(';');
+                // Conversione sicura da CSV (gestisce virgola italiana)
+                return { 
+                    data: c[0], 
+                    tipo: c[1], 
+                    luogo: c[2], 
+                    km: parseFloat(c[3]), 
+                    batt: c[4], 
+                    spesa: parseFloat(c[5].replace(',','.')), 
+                    risp: parseFloat(c[6].replace(',','.')), 
+                    kwh: parseFloat(c[7].replace(',','.')), 
+                    isoDate: new Date().toISOString() 
+                };
+            });
         localStorage.setItem(DB_NAME, JSON.stringify(data)); render();
     };
     reader.readAsText(e.target.files[0]);
 }
 
+// Avvio
 window.onload = () => { render(); document.getElementById('data_inserimento').valueAsDate = new Date(); document.getElementById('chk_data').valueAsDate = new Date(); };
 </script>
 </body>
