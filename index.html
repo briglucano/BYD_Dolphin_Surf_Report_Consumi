@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>BYD Dolphin Monitor Pro v2.2</title>
+    <title>BYD Dolphin Monitor Pro v2.3</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; --save: #2e7d32; }
@@ -176,7 +176,11 @@
                 🏠 €<span id="totSpesaCasa">0</span> | ⛽ €<span id="totSpesaCol">0</span>
             </span>
         </div>
-        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b><br><small style="font-size:0.6em; color:#999">(Solo positivi)</small></div>
+        <div class="stat-small">
+            <small>RISPARMIO NETTO</small><br>
+            <b id="totRisp" style="color:var(--save)">€ 0.00</b>
+            <span class="stat-detail">(Diesel vs EV)</span>
+        </div>
         <div class="stat-small">
             <small id="labelAnnoKwh">kWh 2026</small><br>
             <b id="totKwhAnno" style="color:var(--check)">0.0</b>
@@ -187,14 +191,31 @@
         <div class="stat-small"><small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b></div>
         <div class="stat-small"><small>kWh/100km</small><br><b id="avgConsumo" style="color:var(--consumption)">---</b></div>
     </div>
+    
     <div class="chart-container"><canvas id="savingsChart"></canvas></div>
+    
     <div class="table-wrapper">
         <table id="tabella">
-            <thead><tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>Carica</th><th>Orari</th><th>Durata</th><th>Prezzi</th><th>Spesa</th><th>Risp.</th><th>Azioni</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Km</th>
+                    <th>Diff</th>
+                    <th>Carica %</th>
+                    <th>Orari</th>
+                    <th>Durata</th>
+                    <th>€/kWh</th>
+                    <th>Spesa</th>
+                    <th>Risparmio</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
             <tbody></tbody>
         </table>
         <button id="btnShowMore" class="show-more-btn" onclick="toggleShowAll()">⬇️ Mostra tutto lo storico</button>
     </div>
+
     <div class="actions-footer">
         <div id="backupAlert">Ultimo Backup: Mai effettuato</div>
         <div class="btn-group">
@@ -208,11 +229,13 @@
 </div>
 
 <script>
+// CONFIGURAZIONE TECNICA BYD DOLPHIN
 const CONFIG = { cap: 43.2, consTeorico: 15.5, efficienza: 0.86 };
-const DB_NAME = 'ev_byd_v24_check_edit';
+const DB_NAME = 'ev_byd_v25_final';
 let myChart = null;
 let showAllHistory = false;
 
+// GESTIONE TAB
 function openTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
@@ -220,6 +243,7 @@ function openTab(name) {
     document.getElementById(name).classList.add('active');
 }
 
+// SINCRONIZZAZIONE POTENZA TRA LE TAB
 function syncPower(val) {
     if(document.activeElement.id !== 'pKw_stima') document.getElementById('pKw_stima').value = val;
     if(document.activeElement.id !== 'pKw_carica') document.getElementById('pKw_carica').value = val;
@@ -236,6 +260,7 @@ function stepPower(delta) {
     calcolaStima();
 }
 
+// CALCOLO STIMA TEMPO
 function calcolaStima() {
     const att = parseFloat(document.getElementById('s_att').value) || 0;
     const tar = parseFloat(document.getElementById('s_tar').value) || 0;
@@ -266,17 +291,7 @@ function calcolaStima() {
     }
 }
 
-function calcolaDurataString(start, end) {
-    if (!start || !end) return "-";
-    const [h1, m1] = start.split(':').map(Number);
-    const [h2, m2] = end.split(':').map(Number);
-    let min1 = h1 * 60 + m1;
-    let min2 = h2 * 60 + m2;
-    let diff = min2 - min1;
-    if (diff < 0) diff += 1440;
-    return `${Math.floor(diff / 60)}h ${diff % 60}m`;
-}
-
+// SALVATAGGIO RICARICA
 function salvaRicarica() {
     const dataIn = document.getElementById('data_inserimento').valueAsDate || new Date();
     const att = parseFloat(document.getElementById('c_att').value);
@@ -293,6 +308,7 @@ function salvaRicarica() {
     
     const kwhNetti = CONFIG.cap * (tar - att) / 100;
     const spesa = (kwhNetti / CONFIG.efficienza) * pL;
+    // Calcolo risparmio: costo diesel equivalente - costo ricarica
     const risp = (((kwhNetti / CONFIG.consTeorico) * 100) / 18 * pD) - spesa;
     
     const record = {
@@ -340,71 +356,6 @@ function saveToDb(record, indexFieldId) {
     render();
 }
 
-function preparaModifica(index) {
-    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    let r = h[index];
-    if (r.tipo === 'RICARICA') {
-        openTab('carica');
-        document.getElementById('data_inserimento').value = r.isoDate.split('T')[0];
-        document.getElementById('kmOdo').value = r.km;
-        const savedLuogo = r.luogo || 'DOMESTICA';
-        const radio = document.querySelector(`input[name="luogoRicarica"][value="${savedLuogo}"]`);
-        if(radio) radio.checked = true;
-        document.getElementById('c_att').value = r.c_att !== undefined ? r.c_att : parseFloat(r.batt.split('%')[0]);
-        document.getElementById('c_tar').value = r.c_tar !== undefined ? r.c_tar : parseFloat(r.batt.split('→')[1]);
-        document.getElementById('t_start').value = r.t_start || "";
-        document.getElementById('t_end').value = r.t_end || "";
-        document.getElementById('pKw_carica').value = r.pKw || 1.4;
-        document.getElementById('pLuce').value = r.prezzoLuce || 0.25;
-        document.getElementById('pDiesel').value = r.prezzoDiesel || 1.8;
-        document.getElementById('editIndex').value = index;
-        toggleEditMode('btnSalva', 'btnAnnulla', true);
-    } else if (r.tipo === 'CHECK') {
-        openTab('check');
-        document.getElementById('chk_data').value = r.isoDate.split('T')[0];
-        document.getElementById('chk_km').value = r.km;
-        document.getElementById('chk_perc').value = r.chk_raw || r.batt.replace('%','');
-        document.getElementById('editCheckIndex').value = index;
-        toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', true);
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function toggleEditMode(btnSaveId, btnCancelId, active) {
-    const btn = document.getElementById(btnSaveId);
-    const cancel = document.getElementById(btnCancelId);
-    if(active) {
-        btn.innerText = "🔄 Aggiorna";
-        btn.classList.add('editing');
-        cancel.style.display = 'block';
-    } else {
-        btn.innerText = (btnSaveId === 'btnSalva') ? "💾 Salva Ricarica" : "📝 Registra Stato";
-        btn.classList.remove('editing');
-        cancel.style.display = 'none';
-    }
-}
-
-function annullaModifica() {
-    document.getElementById('editIndex').value = "-1";
-    toggleEditMode('btnSalva', 'btnAnnulla', false);
-    document.getElementById('kmOdo').value = '';
-    document.getElementById('c_att').value = '';
-    document.getElementById('c_tar').value = '';
-    document.getElementById('t_start').value = '';
-    document.getElementById('t_end').value = '';
-    document.getElementById('data_inserimento').valueAsDate = new Date();
-}
-
-function annullaModificaCheck() {
-    document.getElementById('editCheckIndex').value = "-1";
-    toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', false);
-    document.getElementById('chk_km').value = '';
-    document.getElementById('chk_perc').value = '';
-    document.getElementById('chk_data').valueAsDate = new Date();
-}
-
-function toggleShowAll() { showAllHistory = !showAllHistory; render(); }
-
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
@@ -413,14 +364,16 @@ function render() {
     document.getElementById('backupAlert').innerText = "Ultimo Backup: " + (localStorage.getItem('lastBackupDate') || "Mai");
 
     let kwhAnno = 0, kwhCasa = 0, kwhCol = 0;
-    let totSpesa = 0, totRispPositivo = 0, totCasa = 0, totCol = 0;
+    let totSpesa = 0, totRispNetto = 0, totCasa = 0, totCol = 0;
     let chartLabels = [], chartDataSpesa = [], chartDataRisp = [];
 
+    // Processo i dati per le statistiche (ordine cronologico per il grafico)
     [...h].reverse().forEach(r => { 
         if(r.tipo === 'RICARICA') { 
             totSpesa += r.spesa;
-            // Calcolo risparmio solo se positivo per il totale in alto
-            if(r.risp > 0) totRispPositivo += r.risp;
+            
+            // LOGICA BILANCIO NETTO: i negativi sottraggono dal risparmio totale
+            totRispNetto += r.risp;
             
             const luogo = r.luogo || 'DOMESTICA';
             const kwhLordo = (r.kwh / CONFIG.efficienza);
@@ -439,6 +392,7 @@ function render() {
     });
     updateChart(chartLabels, chartDataSpesa, chartDataRisp);
 
+    // Rendering Tabella (ordine inverso: più recenti in alto)
     const limit = showAllHistory ? h.length : 10;
     const visibleData = h.slice(0, limit);
     const btnMore = document.getElementById('btnShowMore');
@@ -473,16 +427,21 @@ function render() {
         </tr>`;
     }).join('');
 
+    // Update Dashboard Widgets
     document.getElementById('totSpesa').innerText = "€ " + totSpesa.toFixed(2);
     document.getElementById('totSpesaCasa').innerText = totCasa.toFixed(2);
     document.getElementById('totSpesaCol').innerText = totCol.toFixed(2);
-    document.getElementById('totRisp').innerText = "€ " + totRispPositivo.toFixed(2);
+    
+    const rispEl = document.getElementById('totRisp');
+    rispEl.innerText = "€ " + totRispNetto.toFixed(2);
+    rispEl.style.color = totRispNetto >= 0 ? 'var(--save)' : 'var(--expense)';
+    
     document.getElementById('totKwhAnno').innerText = kwhAnno.toFixed(1);
     document.getElementById('totKwhCasa').innerText = kwhCasa.toFixed(1);
     document.getElementById('totKwhCol').innerText = kwhCol.toFixed(1);
     document.getElementById('totKmReali').innerText = h[0]?.km || 0;
     
-    // Consumo Medio
+    // Consumo Medio Reale
     let avg = "---";
     const ricariche = h.filter(r => r.tipo === 'RICARICA');
     if (ricariche.length >= 2) {
@@ -492,6 +451,18 @@ function render() {
         if (dist > 0) avg = ((energy / dist) * 100).toFixed(1);
     }
     document.getElementById('avgConsumo').innerText = avg;
+}
+
+// UTILS
+function calcolaDurataString(start, end) {
+    if (!start || !end) return "-";
+    const [h1, m1] = start.split(':').map(Number);
+    const [h2, m2] = end.split(':').map(Number);
+    let min1 = h1 * 60 + m1;
+    let min2 = h2 * 60 + m2;
+    let diff = min2 - min1;
+    if (diff < 0) diff += 1440;
+    return `${Math.floor(diff / 60)}h ${diff % 60}m`;
 }
 
 function updateChart(labels, dataSpesa, dataRisp) {
@@ -506,9 +477,76 @@ function updateChart(labels, dataSpesa, dataRisp) {
                 { label: 'Risparmio (€)', data: dataRisp, backgroundColor: '#2e7d32', stack: '0' }
             ]
         },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            scales: { 
+                x: { stacked: true }, 
+                y: { stacked: false, title: { display: true, text: 'Euro (€)' } } 
+            } 
+        }
     });
 }
+
+function preparaModifica(index) {
+    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    let r = h[index];
+    if (r.tipo === 'RICARICA') {
+        openTab('carica');
+        document.getElementById('data_inserimento').value = r.isoDate.split('T')[0];
+        document.getElementById('kmOdo').value = r.km;
+        const radio = document.querySelector(`input[name="luogoRicarica"][value="${r.luogo || 'DOMESTICA'}"]`);
+        if(radio) radio.checked = true;
+        document.getElementById('c_att').value = r.c_att !== undefined ? r.c_att : 0;
+        document.getElementById('c_tar').value = r.c_tar !== undefined ? r.c_tar : 0;
+        document.getElementById('t_start').value = r.t_start || "";
+        document.getElementById('t_end').value = r.t_end || "";
+        document.getElementById('pKw_carica').value = r.pKw || 1.4;
+        document.getElementById('pLuce').value = r.prezzoLuce || 0.25;
+        document.getElementById('pDiesel').value = r.prezzoDiesel || 1.8;
+        document.getElementById('editIndex').value = index;
+        toggleEditMode('btnSalva', 'btnAnnulla', true);
+    } else {
+        openTab('check');
+        document.getElementById('chk_data').value = r.isoDate.split('T')[0];
+        document.getElementById('chk_km').value = r.km;
+        document.getElementById('chk_perc').value = r.chk_raw || 0;
+        document.getElementById('editCheckIndex').value = index;
+        toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', true);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleEditMode(btnSaveId, btnCancelId, active) {
+    const btn = document.getElementById(btnSaveId);
+    const cancel = document.getElementById(btnCancelId);
+    if(active) {
+        btn.innerText = "🔄 Aggiorna";
+        btn.classList.add('editing');
+        cancel.style.display = 'block';
+    } else {
+        btn.innerText = (btnSaveId === 'btnSalva') ? "💾 Salva Ricarica" : "📝 Registra Stato";
+        btn.classList.remove('editing');
+        cancel.style.display = 'none';
+    }
+}
+
+function annullaModifica() {
+    document.getElementById('editIndex').value = "-1";
+    toggleEditMode('btnSalva', 'btnAnnulla', false);
+    ["kmOdo","c_att","c_tar","t_start","t_end"].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('data_inserimento').valueAsDate = new Date();
+}
+
+function annullaModificaCheck() {
+    document.getElementById('editCheckIndex').value = "-1";
+    toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', false);
+    document.getElementById('chk_km').value = '';
+    document.getElementById('chk_perc').value = '';
+    document.getElementById('chk_data').valueAsDate = new Date();
+}
+
+function toggleShowAll() { showAllHistory = !showAllHistory; render(); }
 
 function esportaExcel() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
@@ -527,14 +565,12 @@ function importaCSV(event) {
         const rows = e.target.result.split('\n');
         let data = [];
         for(let i=1; i<rows.length; i++) {
-            const c = rows[i].split(';'); if(c.length < 8) continue;
-            let luogo = 'DOMESTICA', offset = 0;
-            if(!isNaN(parseFloat(c[2])) && c[2].length > 1) { offset = -1; } else { luogo = c[2]; }
+            const c = rows[i].split(';'); if(c.length < 10) continue;
             data.push({ 
-                data: c[0], tipo: c[1], luogo: luogo, km: parseFloat(c[3+offset]), batt: c[4+offset], 
-                t_start: c[5+offset]||'', t_end: c[6+offset]||'', tempo: c[7+offset], 
-                spesa: parseFloat(c[8+offset]), risp: parseFloat(c[9+offset]), kwh: parseFloat(c[10+offset]), 
-                prezzoLuce: parseFloat(c[11+offset]||0), prezzoDiesel: parseFloat(c[12+offset]||0), isoDate: c[13+offset]||null 
+                data: c[0], tipo: c[1], luogo: c[2], km: parseFloat(c[3]), batt: c[4], 
+                t_start: c[5]||'', t_end: c[6]||'', tempo: c[7], 
+                spesa: parseFloat(c[8]), risp: parseFloat(c[9]), kwh: parseFloat(c[10]||0), 
+                prezzoLuce: parseFloat(c[11]||0), prezzoDiesel: parseFloat(c[12]||0), isoDate: c[13]||new Date().toISOString() 
             });
         }
         localStorage.setItem(DB_NAME, JSON.stringify(data)); render();
