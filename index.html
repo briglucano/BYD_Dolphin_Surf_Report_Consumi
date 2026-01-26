@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>BYD Dolphin Monitor Pro v2.1</title>
+    <title>BYD Dolphin Monitor Pro v2.2</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; --save: #2e7d32; }
@@ -176,7 +176,7 @@
                 🏠 €<span id="totSpesaCasa">0</span> | ⛽ €<span id="totSpesaCol">0</span>
             </span>
         </div>
-        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b></div>
+        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b><br><small style="font-size:0.6em; color:#999">(Solo positivi)</small></div>
         <div class="stat-small">
             <small id="labelAnnoKwh">kWh 2026</small><br>
             <b id="totKwhAnno" style="color:var(--check)">0.0</b>
@@ -221,9 +221,8 @@ function openTab(name) {
 }
 
 function syncPower(val) {
-    const v = val;
-    if(document.activeElement.id !== 'pKw_stima') document.getElementById('pKw_stima').value = v;
-    if(document.activeElement.id !== 'pKw_carica') document.getElementById('pKw_carica').value = v;
+    if(document.activeElement.id !== 'pKw_stima') document.getElementById('pKw_stima').value = val;
+    if(document.activeElement.id !== 'pKw_carica') document.getElementById('pKw_carica').value = val;
     calcolaStima();
 }
 
@@ -332,8 +331,7 @@ function salvaCheck() {
 function saveToDb(record, indexFieldId) {
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const idx = parseInt(document.getElementById(indexFieldId).value);
-    if (idx > -1) { h[idx] = record; alert("Aggiornato!"); } 
-    else { h.push(record); }
+    if (idx > -1) { h[idx] = record; } else { h.push(record); }
     h.sort((a, b) => {
         if (b.km !== a.km) return b.km - a.km; 
         return new Date(b.isoDate) - new Date(a.isoDate);
@@ -352,23 +350,16 @@ function preparaModifica(index) {
         const savedLuogo = r.luogo || 'DOMESTICA';
         const radio = document.querySelector(`input[name="luogoRicarica"][value="${savedLuogo}"]`);
         if(radio) radio.checked = true;
-        if(r.c_att !== undefined) {
-            document.getElementById('c_att').value = r.c_att;
-            document.getElementById('c_tar').value = r.c_tar;
-        } else {
-            let parts = r.batt.replace('%','').split('→');
-            document.getElementById('c_att').value = parseFloat(parts[0]);
-            document.getElementById('c_tar').value = parseFloat(parts[1]);
-        }
+        document.getElementById('c_att').value = r.c_att !== undefined ? r.c_att : parseFloat(r.batt.split('%')[0]);
+        document.getElementById('c_tar').value = r.c_tar !== undefined ? r.c_tar : parseFloat(r.batt.split('→')[1]);
         document.getElementById('t_start').value = r.t_start || "";
         document.getElementById('t_end').value = r.t_end || "";
-        document.getElementById('pKw_carica').value = r.pKw || document.getElementById('pKw_stima').value;
+        document.getElementById('pKw_carica').value = r.pKw || 1.4;
         document.getElementById('pLuce').value = r.prezzoLuce || 0.25;
         document.getElementById('pDiesel').value = r.prezzoDiesel || 1.8;
         document.getElementById('editIndex').value = index;
         toggleEditMode('btnSalva', 'btnAnnulla', true);
-    } 
-    else if (r.tipo === 'CHECK') {
+    } else if (r.tipo === 'CHECK') {
         openTab('check');
         document.getElementById('chk_data').value = r.isoDate.split('T')[0];
         document.getElementById('chk_km').value = r.km;
@@ -402,7 +393,6 @@ function annullaModifica() {
     document.getElementById('t_start').value = '';
     document.getElementById('t_end').value = '';
     document.getElementById('data_inserimento').valueAsDate = new Date();
-    document.querySelector('input[name="luogoRicarica"][value="DOMESTICA"]').checked = true;
 }
 
 function annullaModificaCheck() {
@@ -413,45 +403,37 @@ function annullaModificaCheck() {
     document.getElementById('chk_data').valueAsDate = new Date();
 }
 
-function toggleShowAll() {
-    showAllHistory = !showAllHistory;
-    render();
-}
+function toggleShowAll() { showAllHistory = !showAllHistory; render(); }
 
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
     const annoCorrente = new Date().getFullYear();
     document.getElementById('labelAnnoKwh').innerText = "kWh " + annoCorrente;
-    document.getElementById('backupAlert').innerText = "Ultimo Backup: " + (localStorage.getItem('lastBackupDate') || "Mai effettuato");
+    document.getElementById('backupAlert').innerText = "Ultimo Backup: " + (localStorage.getItem('lastBackupDate') || "Mai");
 
     let kwhAnno = 0, kwhCasa = 0, kwhCol = 0;
-    let totSpesa = 0, totRisp = 0, totCasa = 0, totCol = 0;
+    let totSpesa = 0, totRispPositivo = 0, totCasa = 0, totCol = 0;
     let chartLabels = [], chartDataSpesa = [], chartDataRisp = [];
 
     [...h].reverse().forEach(r => { 
         if(r.tipo === 'RICARICA') { 
             totSpesa += r.spesa;
-            totRisp += r.risp;
+            // Calcolo risparmio solo se positivo per il totale in alto
+            if(r.risp > 0) totRispPositivo += r.risp;
             
             const luogo = r.luogo || 'DOMESTICA';
             const kwhLordo = (r.kwh / CONFIG.efficienza);
-
-            if (luogo === 'DOMESTICA') {
-                totCasa += r.spesa;
-            } else {
-                totCol += r.spesa;
-            }
+            if (luogo === 'DOMESTICA') totCasa += r.spesa; else totCol += r.spesa;
 
             chartLabels.push(r.data); 
             chartDataSpesa.push(r.spesa.toFixed(2));
             chartDataRisp.push(r.risp.toFixed(2));
 
-            let a = r.isoDate ? new Date(r.isoDate).getFullYear() : (r.data ? parseInt(r.data.split('/')[2]) : null);
+            let a = r.isoDate ? new Date(r.isoDate).getFullYear() : parseInt(r.data.split('/')[2]);
             if (a === annoCorrente) {
                 kwhAnno += kwhLordo;
-                if (luogo === 'DOMESTICA') kwhCasa += kwhLordo;
-                else kwhCol += kwhLordo;
+                if (luogo === 'DOMESTICA') kwhCasa += kwhLordo; else kwhCol += kwhLordo;
             }
         } 
     });
@@ -462,47 +444,54 @@ function render() {
     const btnMore = document.getElementById('btnShowMore');
     if(h.length > 10) {
         btnMore.style.display = 'block';
-        btnMore.innerText = showAllHistory ? "⬆️ Riduci elenco" : "⬇️ Mostra tutto lo storico (" + h.length + ")";
+        btnMore.innerText = showAllHistory ? "⬆️ Riduci elenco" : "⬇️ Mostra tutto storico (" + h.length + ")";
     } else { btnMore.style.display = 'none'; }
-
-    let avgConsumo = "---";
-    const ricariche = h.filter(r => r.tipo === 'RICARICA');
-    if (ricariche.length >= 2) {
-        const recent = ricariche[0];
-        const oldest = ricariche[ricariche.length - 1];
-        const dist = recent.km - oldest.km;
-        let energyAdded = 0;
-        for (let i = 0; i < ricariche.length - 1; i++) energyAdded += ricariche[i].kwh;
-        if (recent.c_tar !== undefined && oldest.c_tar !== undefined) {
-            const batteryDeltaKwh = ((oldest.c_tar - recent.c_tar) / 100) * CONFIG.cap;
-            const totalEnergyUsed = energyAdded + batteryDeltaKwh;
-            if (dist > 0 && totalEnergyUsed > 0) avgConsumo = ((totalEnergyUsed / dist) * 100).toFixed(1);
-        } else if (dist > 0 && energyAdded > 0) {
-            avgConsumo = ((energyAdded / dist) * 100).toFixed(1);
-        }
-    }
 
     tb.innerHTML = visibleData.map((r, i) => {
         let originalIndex = h.indexOf(r);
         let delta = h[originalIndex+1] ? r.km - h[originalIndex+1].km : 0;
-        const pInfo = r.prezzoLuce ? `€${r.prezzoLuce} / €${r.prezzoDiesel}` : '-';
-        const orari = r.t_start ? `${r.t_start}<br>${r.t_end}` : '-';
-        let tipoBadge = r.tipo === 'CHECK' ? 
-            '<span style="background:#6a1b9a; color:white; padding:3px 6px; border-radius:5px; font-size:0.7em;">📝 CHECK</span>' : 
-            `<span style="background:${r.luogo==='COLONNINA'?'#e65100':'#2e7d32'}; color:white; padding:3px 6px; border-radius:5px; font-size:0.7em;">${(r.luogo === 'COLONNINA') ? '⛽' : '🏠'} RICARICA</span>`;
-        
-        return `<tr><td>${r.data}</td><td>${tipoBadge}</td><td><b>${r.km}</b></td><td style="color:var(--accent)">${delta>0?'+'+delta:''}</td><td>${r.batt}</td><td style="font-size:0.8em; color:#555;">${orari}</td><td>${r.tempo || '-'}</td><td style="color:#666; font-size:0.8em;">${pInfo}</td><td style="color:var(--expense)">${r.spesa>0?'€'+r.spesa.toFixed(2):'-'}</td><td style="color:var(--save); font-weight:bold;">${r.risp>0?'€'+r.risp.toFixed(2):'-'}</td><td><button style="border:none; background:none; cursor:pointer; font-size:1.1em;" onclick="preparaModifica(${originalIndex})">✏️</button><button style="border:none; background:none; color:red; cursor:pointer; font-size:1.1em;" onclick="elimina(${originalIndex})">🗑️</button></td></tr>`;
+        let rispColor = r.risp >= 0 ? 'var(--save)' : 'var(--expense)';
+        let rispTesto = r.risp !== 0 ? '€' + r.risp.toFixed(2) : '-';
+        let badgeColor = (r.luogo === 'COLONNINA') ? '#e65100' : '#2e7d32';
+        let badgeIcon = (r.luogo === 'COLONNINA') ? '⛽' : '🏠';
+
+        return `<tr>
+            <td>${r.data}</td>
+            <td><span style="background:${r.tipo==='CHECK'?'#6a1b9a':badgeColor}; color:white; padding:3px 6px; border-radius:5px; font-size:0.7em;">${r.tipo==='CHECK'?'📝 CHECK':badgeIcon+' RICARICA'}</span></td>
+            <td><b>${r.km}</b></td>
+            <td style="color:var(--accent)">${delta>0?'+'+delta:''}</td>
+            <td>${r.batt}</td>
+            <td style="font-size:0.8em; color:#555;">${r.t_start||'-'}<br>${r.t_end||''}</td>
+            <td>${r.tempo || '-'}</td>
+            <td style="color:#666; font-size:0.8em;">${r.prezzoLuce? '€'+r.prezzoLuce : '-'}</td>
+            <td style="color:var(--expense)">${r.spesa>0?'€'+r.spesa.toFixed(2):'-'}</td>
+            <td style="color:${rispColor}; font-weight:bold;">${rispTesto}</td>
+            <td>
+                <button style="border:none; background:none; cursor:pointer;" onclick="preparaModifica(${originalIndex})">✏️</button>
+                <button style="border:none; background:none; color:red; cursor:pointer;" onclick="elimina(${originalIndex})">🗑️</button>
+            </td>
+        </tr>`;
     }).join('');
 
     document.getElementById('totSpesa').innerText = "€ " + totSpesa.toFixed(2);
     document.getElementById('totSpesaCasa').innerText = totCasa.toFixed(2);
     document.getElementById('totSpesaCol').innerText = totCol.toFixed(2);
-    document.getElementById('totRisp').innerText = "€ " + totRisp.toFixed(2);
+    document.getElementById('totRisp').innerText = "€ " + totRispPositivo.toFixed(2);
     document.getElementById('totKwhAnno').innerText = kwhAnno.toFixed(1);
     document.getElementById('totKwhCasa').innerText = kwhCasa.toFixed(1);
     document.getElementById('totKwhCol').innerText = kwhCol.toFixed(1);
     document.getElementById('totKmReali').innerText = h[0]?.km || 0;
-    document.getElementById('avgConsumo').innerText = avgConsumo;
+    
+    // Consumo Medio
+    let avg = "---";
+    const ricariche = h.filter(r => r.tipo === 'RICARICA');
+    if (ricariche.length >= 2) {
+        const dist = ricariche[0].km - ricariche[ricariche.length - 1].km;
+        let energy = 0;
+        for (let i = 0; i < ricariche.length - 1; i++) energy += ricariche[i].kwh;
+        if (dist > 0) avg = ((energy / dist) * 100).toFixed(1);
+    }
+    document.getElementById('avgConsumo').innerText = avg;
 }
 
 function updateChart(labels, dataSpesa, dataRisp) {
@@ -517,22 +506,18 @@ function updateChart(labels, dataSpesa, dataRisp) {
                 { label: 'Risparmio (€)', data: dataRisp, backgroundColor: '#2e7d32', stack: '0' }
             ]
         },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
     });
 }
 
 function esportaExcel() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     let csv = "Data;Tipo;Luogo;Km;Batt;Inizio;Fine;Tempo;Spesa;Risp;Kwh;PrezzoLuce;PrezzoDiesel;IsoDate\n";
-    h.forEach(r => {
-        const l = r.luogo || 'DOMESTICA';
-        csv += `${r.data};${r.tipo};${l};${r.km};${r.batt};${r.t_start||''};${r.t_end||''};${r.tempo||''};${r.spesa};${r.risp};${r.kwh};${r.prezzoLuce||''};${r.prezzoDiesel||''};${r.isoDate||''}\n`
-    });
+    h.forEach(r => { csv += `${r.data};${r.tipo};${r.luogo||'DOMESTICA'};${r.km};${r.batt};${r.t_start||''};${r.t_end||''};${r.tempo||''};${r.spesa};${r.risp};${r.kwh};${r.prezzoLuce||''};${r.prezzoDiesel||''};${r.isoDate||''}\n` });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    link.download = `dolphin_pro_db_v2.csv`; link.click();
-    const ora = new Date().toLocaleString('it-IT');
-    localStorage.setItem('lastBackupDate', ora);
+    link.download = `dolphin_pro_db.csv`; link.click();
+    localStorage.setItem('lastBackupDate', new Date().toLocaleString('it-IT'));
     render();
 }
 
@@ -543,10 +528,8 @@ function importaCSV(event) {
         let data = [];
         for(let i=1; i<rows.length; i++) {
             const c = rows[i].split(';'); if(c.length < 8) continue;
-            let luogo = 'DOMESTICA';
-            let offset = 0;
-            if(!isNaN(parseFloat(c[2])) && c[2].length > 1) { offset = -1; luogo = 'DOMESTICA'; } 
-            else { luogo = c[2]; }
+            let luogo = 'DOMESTICA', offset = 0;
+            if(!isNaN(parseFloat(c[2])) && c[2].length > 1) { offset = -1; } else { luogo = c[2]; }
             data.push({ 
                 data: c[0], tipo: c[1], luogo: luogo, km: parseFloat(c[3+offset]), batt: c[4+offset], 
                 t_start: c[5+offset]||'', t_end: c[6+offset]||'', tempo: c[7+offset], 
@@ -554,17 +537,13 @@ function importaCSV(event) {
                 prezzoLuce: parseFloat(c[11+offset]||0), prezzoDiesel: parseFloat(c[12+offset]||0), isoDate: c[13+offset]||null 
             });
         }
-        data.sort((a, b) => {
-            if (b.km !== a.km) return b.km - a.km;
-            return new Date(b.isoDate) - new Date(a.isoDate);
-        });
         localStorage.setItem(DB_NAME, JSON.stringify(data)); render();
     };
     reader.readAsText(event.target.files[0]);
 }
 
 function elimina(i) { if(confirm("Eliminare definitivamente?")) { let h = JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME, JSON.stringify(h)); render(); } }
-function pulisci() { if(confirm("ATTENZIONE: Cancellare tutto il database?")) { localStorage.removeItem(DB_NAME); render(); } }
+function pulisci() { if(confirm("Cancellare tutto il DB?")) { localStorage.removeItem(DB_NAME); render(); } }
 
 window.onload = () => {
     const p = JSON.parse(localStorage.getItem('ev_pref_byd')) || {pL: 0.25, pD: 1.80, pKw: 1.4};
