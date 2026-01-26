@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BYD Dolphin Monitor v3.1 (Fix Totali)</title>
+    <title>BYD Dolphin Monitor v3.4 - PRO</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; --save: #2e7d32; }
+        :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --save: #2e7d32; }
         body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 15px; color: #333; margin: 0; }
         .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 550px; width: 100%; margin-bottom: 20px; border-top: 5px solid var(--primary); box-sizing: border-box; }
         h2 { color: var(--primary); text-align: center; margin: 0; font-size: 1.4rem; }
-        .model-badge { text-align: center; font-size: 0.75em; color: #888; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
         .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 12px; }
         .tab { flex: 1; padding: 12px 5px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: none; color: #666; font-size: 0.8em; }
         .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -20,54 +19,70 @@
         label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.75em; color: #666; }
         input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
         .radio-group { display: flex; gap: 10px; background: #f9f9f9; padding: 5px; border-radius: 10px; border: 1px solid #ddd; }
-        .radio-label { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-size: 0.9em; font-weight: bold; color: #555; }
+        .radio-label { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-size: 0.9em; font-weight: bold; }
         .radio-label:has(input:checked) { background: var(--primary); color: white; }
         .radio-label input { display: none; }
-        .power-box { background: #fffde7; padding: 12px; border-radius: 12px; border: 1px solid #fbc02d; margin-bottom: 10px; }
         button.main-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; background: var(--primary); color: white; font-size: 1rem; }
+        
+        /* STIMA BOX STYLE ORIGINALE */
+        .res-box { background: #e3f2fd; color: #1565c0; padding: 12px; border-radius: 12px; margin-top: 10px; border: 1px solid #bbdefb; }
+        .res-item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; }
+        .res-highlight { border-top: 1px solid #bbdefb; padding-top: 5px; margin-top: 5px; font-weight: bold; color: var(--accent); }
+
         .history-card { background: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
         .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 15px; }
         .stat-small { background: #fff; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
-        .stat-detail { font-size: 0.7em; color: #666; margin-top: 3px; display: block; line-height: 1.2; }
-        .chart-container { width: 100%; height: 250px; margin-bottom: 20px; }
+        .stat-detail { font-size: 0.7em; color: #666; margin-top: 3px; display: block; font-weight: bold;}
         .table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.82em; min-width: 900px; }
         th { text-align: left; padding: 10px; background: #f8f9fa; border-bottom: 2px solid #eee; }
         td { padding: 10px; border-bottom: 1px solid #eee; }
-        .btn-cancel { display:none; width:100%; margin-top:5px; padding:10px; border:none; background:#ccc; border-radius:10px; cursor: pointer; }
+        
+        .actions-footer { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
+        #backup-info { font-size: 0.75em; color: #888; font-style: italic; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-action { padding: 10px 15px; border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: bold; font-size: 0.75em; }
+        @media print { .card, .tabs, .actions-footer, .btn-action { display: none !important; } }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>BYD DOLPHIN</h2>
-    <div class="model-badge">Active/Boost | 43.2 kWh</div>
-    
+    <h2>BYD DOLPHIN PRO</h2>
     <div class="tabs">
         <button class="tab active" onclick="openTab('stima')">⏱️ Stima</button>
         <button class="tab" onclick="openTab('carica')">🔌 Ricarica</button>
-        <button class="tab" onclick="openTab('check')">📝 Check-up</button>
+        <button class="tab" onclick="openTab('check')">📝 Check</button>
     </div>
 
     <div id="stima" class="form-section active">
-        <div class="power-box">
-            <label>⚡ Potenza di Ricarica (kW)</label>
+        <div style="background: #fffde7; padding: 12px; border-radius: 12px; border: 1px solid #fbc02d; margin-bottom: 10px;">
+            <label style="color: #bc5100;">⚡ Potenza di Ricarica (kW)</label>
             <input type="number" id="pKw_stima" step="0.1" value="2.3" oninput="calcolaStima()">
         </div>
         <div class="grid">
             <div><label>% Attuale</label><input type="number" id="s_att" oninput="calcolaStima()"></div>
             <div><label>% Target</label><input type="number" id="s_tar" oninput="calcolaStima()"></div>
         </div>
-        <div class="res-box" id="resStimaBox" style="background:#e3f2fd; padding:15px; border-radius:12px; text-align:center;">
-            <div style="font-size:0.9em;">Energia: <b id="resKwhStima">0 kWh</b></div>
-            <div style="font-size:1.2em; color:var(--primary); font-weight:bold; margin-top:5px;" id="resTempo">--h --m</div>
+        <div class="grid">
+             <div style="grid-column: span 2;">
+                <label>🔔 Orario Prelievo Auto (Opzionale)</label>
+                <input type="time" id="s_orario_fine" oninput="calcolaStima()">
+             </div>
+        </div>
+        <div class="res-box">
+            <div class="res-item"><span>Energia necessaria:</span> <b id="resKwhStima">0 kWh</b></div>
+            <div class="res-item"><span>Tempo stimato:</span> <b id="resTempo">-</b></div>
+            <div class="res-item res-highlight">
+                <span>COLLEGA ALLE ORE:</span> 
+                <b id="resOrarioAvvio" style="font-size:1.3em;">--:--</b>
+            </div>
         </div>
     </div>
 
     <div id="carica" class="form-section">
-        <input type="hidden" id="editIndex" value="-1">
         <div class="grid">
-            <div style="grid-column: span 2;"><label>Data</label><input type="date" id="data_inserimento"></div>
+            <div style="grid-column: span 2;"><label>Data Ricarica</label><input type="date" id="data_inserimento"></div>
         </div>
         <div class="grid">
             <div style="grid-column: span 2;">
@@ -79,7 +94,7 @@
             </div>
         </div>
         <div class="grid">
-            <div style="grid-column: span 2;"><label>Km Totali</label><input type="number" id="kmOdo" placeholder="Esempio: 5400"></div>
+            <div style="grid-column: span 2;"><label>Km Totali Cruscotto</label><input type="number" id="kmOdo"></div>
         </div>
         <div class="grid">
             <div><label>% Inizio</label><input type="number" id="c_att"></div>
@@ -89,63 +104,60 @@
             <div><label>€/kWh Luce</label><input type="number" id="pLuce" step="0.001" value="0.25"></div>
             <div><label>€/L Diesel</label><input type="number" id="pDiesel" step="0.001" value="1.75"></div>
         </div>
-        <button id="btnSalva" class="main-btn" onclick="salvaRicarica()">💾 Salva Ricarica</button>
-        <button id="btnAnnulla" class="btn-cancel" onclick="annullaModifica()">❌ Annulla</button>
+        <button class="main-btn" onclick="salvaRicarica()">💾 Salva Ricarica</button>
     </div>
 
     <div id="check" class="form-section">
-        <input type="hidden" id="editCheckIndex" value="-1">
         <div class="grid">
             <div><label>Data</label><input type="date" id="chk_data"></div>
             <div><label>Km</label><input type="number" id="chk_km"></div>
         </div>
-        <div class="grid">
-            <div style="grid-column: span 2;"><label>% Batteria</label><input type="number" id="chk_perc"></div>
-        </div>
-        <button id="btnSalvaCheck" class="main-btn" style="background:var(--check)" onclick="salvaCheck()">📝 Registra Stato</button>
+        <button class="main-btn" style="background:var(--check)" onclick="salvaCheck()">📝 Registra Stato</button>
     </div>
 </div>
 
 <div class="history-card">
     <div class="stats-summary">
         <div class="stat-small">
-            <small>SPESA TOTALE</small><br>
-            <b id="totSpesa" style="color:var(--expense)">€ 0.00</b>
+            <small>SPESA TOT.</small><br><b id="totSpesa" style="color:var(--expense)">€ 0.00</b>
             <span class="stat-detail">🏠 €<span id="totSpesaCasa">0</span> | ⛽ €<span id="totSpesaCol">0</span></span>
         </div>
         <div class="stat-small">
-            <small>RISPARMIO</small><br>
-            <b id="totRisp" style="color:var(--save)">€ 0.00</b>
+            <small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b>
         </div>
         <div class="stat-small">
-            <small id="labelAnnoKwh">kWh 2026</small><br>
-            <b id="totKwhAnno" style="color:var(--check)">0.0</b>
+            <small>kWh TOTALI</small><br><b id="totKwhAnno" style="color:var(--check)">0.0</b>
             <span class="stat-detail">🏠 <span id="totKwhCasa">0</span> | ⛽ <span id="totKwhCol">0</span></span>
         </div>
         <div class="stat-small">
-            <small>KM AUTO</small><br>
-            <b id="totKmReali" style="color:var(--accent)">0</b>
+            <small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b>
         </div>
     </div>
-    
-    <div class="chart-container"><canvas id="savingsChart"></canvas></div>
     
     <div class="table-wrapper">
         <table id="tabella">
             <thead>
-                <tr>
-                    <th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>%</th><th>Spesa</th><th>Risp.</th><th>Azioni</th>
-                </tr>
+                <tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>%</th><th>Spesa</th><th>Risp.</th><th>Azioni</th></tr>
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+
+    <div class="actions-footer">
+        <div id="backup-info">Ultimo backup: Mai effettuato</div>
+        <div class="btn-group">
+            <button class="btn-action" style="background:#546e7a" onclick="window.print(); aggiornaBackupTime();">📄 PDF</button>
+            <button class="btn-action" style="background:var(--excel)" onclick="esportaExcel()">📊 Excel</button>
+            <button class="btn-action" style="background:var(--primary)" onclick="document.getElementById('fileInput').click()">📥 Importa</button>
+            <input type="file" id="fileInput" style="display:none" accept=".csv" onchange="importaCSV(event)">
+            <button class="btn-action" style="background:red" onclick="pulisci()">🗑️ Reset</button>
+        </div>
     </div>
 </div>
 
 <script>
 const CONFIG = { cap: 43.2, consTeorico: 15.5, efficienza: 0.86 };
-const DB_NAME = 'ev_byd_v3_1';
-let myChart = null;
+const DB_NAME = 'ev_byd_v3_4';
 
 function openTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -154,15 +166,35 @@ function openTab(name) {
     document.getElementById(name).classList.add('active');
 }
 
+// LOGICA STIMA RIPRISTINATA ALL'ORIGINALE
 function calcolaStima() {
     const att = parseFloat(document.getElementById('s_att').value) || 0;
     const tar = parseFloat(document.getElementById('s_tar').value) || 0;
-    const kw = parseFloat(document.getElementById('pKw_stima').value) || 1;
+    const kw = parseFloat(document.getElementById('pKw_stima').value) || 1.4;
+    
     if (tar > att) {
         const kwh = CONFIG.cap * (tar - att) / 100;
         const oreDec = (kwh / kw) / CONFIG.efficienza;
+        
         document.getElementById('resKwhStima').innerText = kwh.toFixed(1) + " kWh";
         document.getElementById('resTempo').innerText = Math.floor(oreDec) + "h " + Math.round((oreDec % 1)*60) + "m";
+        
+        const orarioFine = document.getElementById('s_orario_fine').value;
+        if (orarioFine) {
+            const [h, m] = orarioFine.split(':').map(Number);
+            const targetDate = new Date();
+            targetDate.setHours(h, m, 0);
+            const startDate = new Date(targetDate.getTime() - (oreDec * 3600000));
+            document.getElementById('resOrarioAvvio').innerText = 
+                String(startDate.getHours()).padStart(2, '0') + ":" + 
+                String(startDate.getMinutes()).padStart(2, '0');
+        } else {
+            document.getElementById('resOrarioAvvio').innerText = "--:--";
+        }
+    } else {
+        document.getElementById('resKwhStima').innerText = "0 kWh";
+        document.getElementById('resTempo').innerText = "-";
+        document.getElementById('resOrarioAvvio').innerText = "--:--";
     }
 }
 
@@ -173,51 +205,29 @@ function salvaRicarica() {
     const pL = parseFloat(document.getElementById('pLuce').value);
     const pD = parseFloat(document.getElementById('pDiesel').value);
     const luogo = document.querySelector('input[name="luogoRicarica"]:checked').value;
-    const dataIn = document.getElementById('data_inserimento').value || new Date().toISOString().split('T')[0];
+    const data = document.getElementById('data_inserimento').value || new Date().toISOString().split('T')[0];
 
-    if (isNaN(km) || isNaN(att) || isNaN(tar)) {
-        alert("Inserisci Km e percentuali batteria!");
-        return;
-    }
+    if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti!");
 
     const kwhNetti = CONFIG.cap * (tar - att) / 100;
     const kwhLordo = kwhNetti / CONFIG.efficienza;
     const spesa = kwhLordo * pL;
-    // Calcolo diesel: km stimati ottenuti da quei kWh / 18km/l * prezzo diesel
-    const kmStimati = (kwhNetti / CONFIG.consTeorico) * 100;
-    const costoDieselEq = (kmStimati / 18) * pD;
-    const risp = costoDieselEq - spesa;
-
-    const record = {
-        tipo: 'RICARICA',
-        data: dataIn,
-        km: km,
-        luogo: luogo,
-        batt: att + "%→" + tar + "%",
-        spesa: parseFloat(spesa.toFixed(2)),
-        risp: parseFloat(risp.toFixed(2)),
-        kwh: parseFloat(kwhLordo.toFixed(2))
-    };
+    const risp = (( (kwhNetti / CONFIG.consTeorico) * 100) / 18 * pD) - spesa;
 
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    const idx = parseInt(document.getElementById('editIndex').value);
-    if (idx > -1) h[idx] = record; else h.push(record);
-    
-    h.sort((a, b) => new Date(b.data) - new Date(a.data) || b.km - a.km);
+    h.push({ tipo: 'RICARICA', data, km, luogo, batt: att+"%→"+tar+"%", spesa, risp, kwh: kwhLordo });
+    h.sort((a,b) => new Date(b.data) - new Date(a.data) || b.km - a.km);
     localStorage.setItem(DB_NAME, JSON.stringify(h));
-    annullaModifica();
     render();
 }
 
 function salvaCheck() {
     const km = parseFloat(document.getElementById('chk_km').value);
-    const perc = document.getElementById('chk_perc').value;
     const data = document.getElementById('chk_data').value || new Date().toISOString().split('T')[0];
     if(isNaN(km)) return;
-
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    h.push({ tipo: 'CHECK', data, km, batt: perc + "%", spesa: 0, risp: 0, kwh: 0, luogo: '-' });
-    h.sort((a, b) => new Date(b.data) - new Date(a.data) || b.km - a.km);
+    h.push({ tipo: 'CHECK', data, km, batt: "Check", spesa: 0, risp: 0, kwh: 0, luogo: '-' });
+    h.sort((a,b) => new Date(b.data) - new Date(a.data) || b.km - a.km);
     localStorage.setItem(DB_NAME, JSON.stringify(h));
     render();
 }
@@ -225,86 +235,77 @@ function salvaCheck() {
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
-    const annoCurr = new Date().getFullYear();
-
-    let tSpesa = 0, tRisp = 0, tCasa = 0, tCol = 0;
-    let kwhCasa = 0, kwhCol = 0;
-    let cLabs = [], cSpesa = [], cRisp = [];
-
-    tb.innerHTML = "";
+    let tS = 0, tR = 0, tSC = 0, tSK = 0, kC = 0, kK = 0;
     
+    tb.innerHTML = "";
     h.forEach((r, i) => {
-        const dStr = r.data.split('-').reverse().join('/');
         let delta = h[i+1] ? r.km - h[i+1].km : 0;
-        let colorR = r.risp >= 0 ? 'var(--save)' : 'var(--expense)';
-        
-        // Calcolo statistiche
         if(r.tipo === 'RICARICA') {
-            tSpesa += r.spesa;
-            tRisp += r.risp;
-            if(r.luogo === 'COLONNINA') {
-                tCol += r.spesa;
-                kwhCol += r.kwh;
-            } else {
-                tCasa += r.spesa;
-                kwhCasa += r.kwh;
-            }
-            cLabs.unshift(dStr);
-            cSpesa.unshift(r.spesa);
-            cRisp.unshift(r.risp);
+            tS += r.spesa; tR += r.risp;
+            if(r.luogo === 'COLONNINA') { tSK += r.spesa; kK += r.kwh; } else { tSC += r.spesa; kC += r.kwh; }
         }
-
-        const badge = `<span style="background:${r.tipo==='CHECK'?'#6a1b9a':(r.luogo==='COLONNINA'?'#e65100':'#2e7d32')}; color:white; padding:2px 5px; border-radius:4px; font-size:0.8em;">${r.luogo==='COLONNINA'?'⛽':'🏠'}</span>`;
-
         tb.innerHTML += `<tr>
-            <td>${dStr}</td><td>${badge}</td><td><b>${r.km}</b></td>
+            <td>${r.data.split('-').reverse().join('/')}</td>
+            <td>${r.luogo==='COLONNINA'?'⛽':'🏠'}</td>
+            <td><b>${r.km}</b></td>
             <td style="color:var(--accent)">${delta>0?'+'+delta:''}</td>
-            <td>${r.batt}</td><td style="color:var(--expense)">${r.spesa>0?'€'+r.spesa.toFixed(2):'-'}</td>
-            <td style="color:${colorR}; font-weight:bold;">${r.tipo==='RICARICA'?'€'+r.risp.toFixed(2):'-'}</td>
-            <td><button onclick="elimina(${i})" style="border:none; background:none; color:red; cursor:pointer;">🗑️</button></td>
+            <td>${r.batt}</td>
+            <td style="color:var(--expense)">${r.spesa>0?'€'+r.spesa.toFixed(2):'-'}</td>
+            <td style="color:${r.risp>=0?'var(--save)':'var(--expense)'}; font-weight:bold;">${r.tipo==='RICARICA'?'€'+r.risp.toFixed(2):'-'}</td>
+            <td><button onclick="elimina(${i})" style="border:none;background:none;color:red;cursor:pointer">🗑️</button></td>
         </tr>`;
     });
 
-    document.getElementById('totSpesa').innerText = "€ " + tSpesa.toFixed(2);
-    document.getElementById('totSpesaCasa').innerText = tCasa.toFixed(2);
-    document.getElementById('totSpesaCol').innerText = tCol.toFixed(2);
-    document.getElementById('totRisp').innerText = "€ " + tRisp.toFixed(2);
-    document.getElementById('totRisp').style.color = tRisp >= 0 ? 'var(--save)' : 'var(--expense)';
-    document.getElementById('totKwhAnno').innerText = (kwhCasa + kwhCol).toFixed(1);
-    document.getElementById('totKwhCasa').innerText = kwhCasa.toFixed(1);
-    document.getElementById('totKwhCol').innerText = kwhCol.toFixed(1);
+    document.getElementById('totSpesa').innerText = "€ " + tS.toFixed(2);
+    document.getElementById('totSpesaCasa').innerText = tSC.toFixed(2);
+    document.getElementById('totSpesaCol').innerText = tSK.toFixed(2);
+    document.getElementById('totRisp').innerText = "€ " + tR.toFixed(2);
+    document.getElementById('totKwhAnno').innerText = (kC + kK).toFixed(1);
+    document.getElementById('totKwhCasa').innerText = kC.toFixed(1);
+    document.getElementById('totKwhCol').innerText = kK.toFixed(1);
     document.getElementById('totKmReali').innerText = h[0]?.km || 0;
-
-    updateChart(cLabs, cSpesa, cRisp);
+    
+    const lastB = localStorage.getItem(DB_NAME + '_lastbackup');
+    if(lastB) document.getElementById('backup-info').innerText = "Ultimo backup: " + lastB;
 }
 
-function updateChart(l, s, r) {
-    const ctx = document.getElementById('savingsChart').getContext('2d');
-    if (myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: l, datasets: [{ label: 'Spesa', data: s, backgroundColor: '#c62828' }, { label: 'Risparmio', data: r, backgroundColor: '#2e7d32' }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-    });
+function aggiornaBackupTime() {
+    const now = new Date().toLocaleString('it-IT');
+    localStorage.setItem(DB_NAME + '_lastbackup', now);
+    document.getElementById('backup-info').innerText = "Ultimo backup: " + now;
 }
 
-function annullaModifica() { 
-    document.getElementById('editIndex').value = -1;
-    document.getElementById('btnSalva').innerText = "💾 Salva Ricarica";
-    document.getElementById('btnAnnulla').style.display = 'none';
-    document.getElementById('kmOdo').value = "";
-    document.getElementById('c_att').value = "";
-    document.getElementById('c_tar').value = "";
+function esportaExcel() {
+    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    let csv = "Data;Tipo;Luogo;Km;Batt;Spesa;Risparmio;Kwh\n" + h.map(r => `${r.data};${r.tipo};${r.luogo};${r.km};${r.batt};${r.spesa};${r.risp};${r.kwh}`).join('\n');
+    let link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    link.download = "Dolphin_Report.csv"; link.click();
+    aggiornaBackupTime();
 }
 
-function elimina(i) { 
-    if(confirm("Eliminare questa voce?")) { 
-        let h = JSON.parse(localStorage.getItem(DB_NAME)); 
-        h.splice(i,1); 
-        localStorage.setItem(DB_NAME, JSON.stringify(h)); 
-        render(); 
-    } 
+function importaCSV(e) {
+    let reader = new FileReader();
+    reader.onload = (ev) => {
+        let rows = ev.target.result.split('\n').slice(1);
+        let data = rows.filter(r => r.trim() !== "").map(row => {
+            let c = row.split(';');
+            return { 
+                data: c[0], tipo: c[1], luogo: c[2], 
+                km: parseFloat(c[3]), batt: c[4], 
+                spesa: parseFloat(String(c[5]).replace(',','.')), 
+                risp: parseFloat(String(c[6]).replace(',','.')), 
+                kwh: parseFloat(String(c[7]).replace(',','.')) 
+            };
+        });
+        localStorage.setItem(DB_NAME, JSON.stringify(data));
+        render();
+    };
+    reader.readAsText(e.target.files[0]);
 }
+
+function elimina(i) { if(confirm("Eliminare?")) { let h = JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME, JSON.stringify(h)); render(); } }
+function pulisci() { if(confirm("RESET TOTALE?")) { localStorage.removeItem(DB_NAME); render(); } }
 
 window.onload = () => {
     document.getElementById('data_inserimento').valueAsDate = new Date();
