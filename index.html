@@ -5,23 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>EV Monitor 3.0 Custom</title>
+    
+    <title>EV MONITOR 741 RA</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; --save: #2e7d32; --time: #5e35b1; --setting: #455a64; }
+        :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; --save: #2e7d32; --time: #5e35b1; --setting: #455a64; --maint: #795548; --bill: #f9a825; }
         body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 15px; color: #333; margin: 0; }
         .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 550px; width: 100%; margin-bottom: 20px; border-top: 5px solid var(--primary); box-sizing: border-box; }
         h2 { color: var(--primary); text-align: center; margin: 0; font-size: 1.4rem; }
         .model-badge { text-align: center; font-size: 0.75em; color: #888; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
-        .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 12px; flex-wrap: wrap; }
-        .tab { flex: 1; padding: 10px 5px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: none; color: #666; font-size: 0.8em; min-width: 70px; }
+        
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 12px; flex-wrap: wrap; justify-content: center; }
+        .tab { flex: 1; padding: 8px 4px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: none; color: #666; font-size: 0.75em; min-width: 60px; white-space: nowrap; }
         .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .form-section { display: none; }
+        
+        .form-section { display: none; animation: fadeIn 0.3s; }
         .form-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
         label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.75em; color: #666; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 1rem; -webkit-appearance: none; background: white; }
-        
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 1rem; -webkit-appearance: none; background: white; }
+        textarea { resize: vertical; height: 70px; font-family: inherit; }
+
         .radio-group { display: flex; gap: 10px; background: #f9f9f9; padding: 5px; border-radius: 10px; border: 1px solid #ddd; }
         .radio-label { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-size: 0.9em; font-weight: bold; color: #555; transition: 0.2s; }
         .radio-label:has(input:checked) { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
@@ -35,14 +42,13 @@
         .res-highlight { border-top: 1px solid #bbdefb; padding-top: 5px; margin-top: 5px; font-weight: bold; color: var(--accent); }
         
         .power-box { background: #fffde7; padding: 12px; border-radius: 12px; border: 1px solid #fbc02d; margin-bottom: 10px; }
-        .power-box label { color: #bc5100; font-weight: bold; }
         
         button.main-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; background: var(--primary); color: white; font-size: 1rem; transition: background 0.3s; }
         button.main-btn.editing { background: var(--edit); color: #333; }
         .btn-cancel { display:none; width:100%; margin-top:5px; padding:10px; border:none; background:#ccc; border-radius:10px; font-weight:bold; cursor: pointer; }
         
         .history-card { background: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
-        .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 15px; }
+        .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 15px; }
         .stat-small { background: #fff; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
         .stat-detail { font-size: 0.7em; color: #666; margin-top: 3px; display: block; line-height: 1.2; font-weight: bold; }
         
@@ -58,21 +64,39 @@
         .btn-action { padding: 10px 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.75em; color: white; display: flex; align-items: center; gap: 5px; }
         #backupAlert { color: #c62828; font-weight: bold; font-size: 0.85em; background: #ffebee; padding: 5px 15px; border-radius: 20px; border: 1px solid #ffcdd2; }
         
-        /* Stile specifico per setup */
         .setup-box { background: #eceff1; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #cfd8dc; }
-        .setup-box label { color: #455a64; }
+        
+        .bill-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; min-width: auto; }
+        .bill-table th { background: #fff3e0; color: #ef6c00; padding: 8px; }
+        .bill-table td { padding: 8px; text-align: center; border-bottom: 1px solid #eee; }
+        .dispersion-box { background: #fff8e1; border: 1px solid #ffecb3; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .card, .tabs, .form-section, .actions-footer, .show-more-btn { display: none !important; }
+            .history-card { box-shadow: none; border: none; max-width: 100%; padding: 0; margin: 0; }
+            .table-wrapper { overflow: visible; }
+            table { width: 100%; font-size: 9pt; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 4px; }
+            .chart-container { height: 250px; page-break-inside: avoid; }
+            .stat-small { border: 1px solid #ccc; }
+        }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>EV MONITOR</h2>
-    <div class="model-badge" id="lblModelBadge">Configurazione Personalizzata</div>
+    
+    <h2>EV MONITOR 741 RA</h2>
+    
+    <div class="model-badge" id="lblModelBadge">Ready</div>
     
     <div class="tabs">
         <button class="tab active" onclick="openTab('stima')">⏱️ Stima</button>
         <button class="tab" onclick="openTab('carica')">🔌 Ricarica</button>
         <button class="tab" onclick="openTab('check')">📝 Check</button>
+        <button class="tab" onclick="openTab('manutenzione')" style="color:var(--maint)">🛠️ Manut.</button>
+        <button class="tab" onclick="openTab('bolletta')" style="color:var(--bill)">📄 Bolletta</button>
         <button class="tab" style="color:var(--setting)" onclick="openTab('settings')">⚙️ Setup</button>
     </div>
 
@@ -81,7 +105,7 @@
             <label>⚡ Potenza di Ricarica (kW)</label>
             <div class="power-ctrl">
                 <button class="btn-step" onclick="stepPower(-0.1)">-</button>
-                <input type="number" id="pKw_stima" step="0.1" oninput="syncPower(this.value)" placeholder="Es: 2.3">
+                <input type="text" inputmode="decimal" id="pKw_stima" oninput="syncPower(this.value)" placeholder="Es: 2.3">
                 <button class="btn-step" onclick="stepPower(0.1)">+</button>
             </div>
         </div>
@@ -91,196 +115,129 @@
         </div>
         <div class="grid">
              <div style="grid-column: span 2;">
-                <label>🔔 Orario Prelievo Auto (Opzionale)</label>
+                <label>⏰ Orario Prelievo Auto</label>
                 <input type="time" id="s_orario_fine" oninput="calcolaStima()">
              </div>
         </div>
         <div class="res-box">
-            <div class="res-item"><span>Energia necessaria:</span> <b id="resKwhStima">0 kWh</b></div>
-            <div class="res-item"><span>Tempo stimato:</span> <b id="resTempo">-</b></div>
-            <div class="res-item res-highlight">
-                <span>COLLEGA ALLE ORE:</span> 
-                <b id="resOrarioAvvio" style="font-size:1.3em;">--:--</b>
-            </div>
+            <div class="res-item"><span>Energia:</span> <b id="resKwhStima">0 kWh</b></div>
+            <div class="res-item"><span>Tempo (Puro):</span> <b id="resTempo">-</b></div>
+            <div class="res-item res-highlight"><span>COLLEGA ALLE:</span> <b id="resOrarioAvvio" style="font-size:1.3em;">--:--</b></div>
         </div>
     </div>
 
     <div id="carica" class="form-section">
         <input type="hidden" id="editIndex" value="-1">
         <div class="grid">
-            <div style="grid-column: span 2;">
-                <label>Data Ricarica</label>
-                <input type="date" id="data_inserimento">
-            </div>
+            <div style="grid-column: span 2;"><label>Data Ricarica</label><input type="date" id="data_inserimento"></div>
         </div>
-        
         <div class="grid" style="grid-template-columns: 1fr;">
-            <label>📍 Luogo Ricarica</label>
+            <label>📍 Luogo</label>
             <div class="radio-group">
-                <label class="radio-label">
-                    <input type="radio" name="luogoRicarica" value="DOMESTICA" checked>
-                    🏠 Domestica
-                </label>
-                <label class="radio-label">
-                    <input type="radio" name="luogoRicarica" value="COLONNINA">
-                    ⛽ Colonnina
-                </label>
+                <label class="radio-label"><input type="radio" name="luogoRicarica" value="DOMESTICA" checked> 🏠 Domestica</label>
+                <label class="radio-label"><input type="radio" name="luogoRicarica" value="COLONNINA"> ⛽ Colonnina</label>
             </div>
         </div>
-
+        <div class="grid"><div style="grid-column: span 2;"><label>Km Totali</label><input type="number" id="kmOdo"></div></div>
+        <div class="grid"><div><label>% Inizio</label><input type="number" id="c_att"></div><div><label>% Fine</label><input type="number" id="c_tar"></div></div>
         <div class="grid">
-            <div style="grid-column: span 2;"><label>Km Totali Cruscotto</label><input type="number" id="kmOdo"></div>
-        </div>
-        <div class="grid">
-            <div><label>% Inizio</label><input type="number" id="c_att"></div>
-            <div><label>% Fine</label><input type="number" id="c_tar"></div>
-        </div>
-        <div class="grid">
-            <div><label>Ora Inizio</label><input type="time" id="t_start"></div>
-            <div><label>Ora Fine</label><input type="time" id="t_end"></div>
+            <div><label>🟢 Ora Inizio</label><input type="time" id="t_start"></div>
+            <div><label>🔴 Ora Fine</label><input type="time" id="t_end"></div>
         </div>
         <div class="power-box">
-            <label>⚡ Potenza Usata (kW)</label>
+            <label>⚡ Potenza (kW)</label>
             <div class="power-ctrl">
                 <button class="btn-step" onclick="stepPower(-0.1)">-</button>
-                <input type="number" id="pKw_carica" step="0.1" oninput="syncPower(this.value)">
+                <input type="text" inputmode="decimal" id="pKw_carica" oninput="syncPower(this.value)">
                 <button class="btn-step" onclick="stepPower(0.1)">+</button>
             </div>
         </div>
-        <div class="grid">
-            <div><label>Luce €/kWh</label><input type="number" id="pLuce" step="0.001"></div>
-            <div><label>Diesel €/L</label><input type="number" id="pDiesel" step="0.001"></div>
-        </div>
+        <div class="grid"><div><label>Luce €/kWh</label><input type="number" id="pLuce" step="0.001"></div><div><label>Diesel €/L</label><input type="number" id="pDiesel" step="0.001"></div></div>
         <button id="btnSalva" class="main-btn" onclick="salvaRicarica()">💾 Salva Ricarica</button>
-        <button id="btnAnnulla" class="btn-cancel" onclick="annullaModifica()">❌ Annulla Modifica</button>
+        <button id="btnAnnulla" class="btn-cancel" onclick="annullaModifica()">❌ Annulla</button>
     </div>
 
     <div id="check" class="form-section">
         <input type="hidden" id="editCheckIndex" value="-1">
-        <div class="grid">
-            <div style="grid-column: span 2;">
-                <label>Data Controllo</label>
-                <input type="date" id="chk_data">
-            </div>
-        </div>
-        <div class="grid">
-            <div style="grid-column: span 2;">
-                <label>Modalità Guida (Prevalente)</label>
-                <select id="chk_mode">
-                    <option value="ECO">Eco</option>
-                    <option value="MISTO">Misto</option>
-                    <option value="NORMAL">Normal</option>
-                    <option value="SPORT">Sport</option>
-                </select>
-            </div>
-        </div>
-        <div class="grid">
-            <div><label>Km Totali</label><input type="number" id="chk_km"></div>
-            <div><label>% Batteria</label><input type="number" id="chk_perc"></div>
-        </div>
+        <div class="grid"><div style="grid-column: span 2;"><label>Data Controllo</label><input type="date" id="chk_data"></div></div>
+        <div class="grid"><div style="grid-column: span 2;">
+            <label>Modalità Guida</label>
+            <select id="chk_mode">
+                <option value="NORMAL">Normal</option>
+                <option value="ECO">Eco</option>
+                <option value="SPORT">Sport</option>
+                <option value="MISTO">Misto</option>
+            </select>
+        </div></div>
+        <div class="grid"><div><label>Km Totali</label><input type="number" id="chk_km"></div><div><label>% Batteria</label><input type="number" id="chk_perc"></div></div>
         <button id="btnSalvaCheck" class="main-btn" style="background:var(--check)" onclick="salvaCheck()">📝 Registra Stato</button>
-        <button id="btnAnnullaCheck" class="btn-cancel" onclick="annullaModificaCheck()">❌ Annulla Modifica</button>
+        <button id="btnAnnullaCheck" class="btn-cancel" onclick="annullaModificaCheck()">❌ Annulla</button>
+    </div>
+
+    <div id="manutenzione" class="form-section">
+        <input type="hidden" id="editMaintIndex" value="-1">
+        <div class="grid"><div style="grid-column: span 2;"><label>Data</label><input type="date" id="man_data"></div></div>
+        <div class="grid"><div style="grid-column: span 2;"><label>Tipo</label>
+            <select id="man_tipo">
+                <option value="TAGLIANDO">Tagliando</option>
+                <option value="GOMME">Gomme</option>
+                <option value="TERGICRISTALLI">Tergicristalli</option>
+                <option value="LIQUIDI">Liquidi</option>
+                <option value="ALTRO">Altro</option>
+            </select>
+        </div></div>
+        <div class="grid"><div><label>Costo (€)</label><input type="number" id="man_costo" step="0.01"></div><div><label>Km</label><input type="number" id="man_km"></div></div>
+        <div class="grid"><div style="grid-column: span 2;"><label>Note / Dettagli</label><textarea id="man_note"></textarea></div></div>
+        <button id="btnSalvaMaint" class="main-btn" style="background:var(--maint)" onclick="salvaManutenzione()">🛠️ Registra</button>
+        <button id="btnAnnullaMaint" class="btn-cancel" onclick="annullaModificaMaint()">❌ Annulla</button>
+    </div>
+
+    <div id="bolletta" class="form-section">
+        <div class="setup-box" style="background:#fff3e0; border-color:#ffe0b2;">
+            <h3 style="margin-top:0; color:#ef6c00;">⚡ Stima Bolletta</h3>
+            <div class="dispersion-box">
+                <label style="color:#ef6c00;">Perdita / Dispersione (%)</label>
+                <input type="number" id="dispersionVal" value="15" step="0.1" style="width:80px;text-align:center;font-weight:bold" oninput="calcolaBolletta()">
+            </div>
+            <table class="bill-table"><thead><tr><th>Mese</th><th>kWh Auto</th><th>kWh Reali</th><th>Costo</th></tr></thead><tbody id="billBody"></tbody></table>
+        </div>
     </div>
 
     <div id="settings" class="form-section">
         <div class="setup-box">
-            <p style="font-size:0.8em; color:#555; margin-top:0;">Questi dati servono per calcolare le stime di ricarica e il confronto del risparmio.</p>
-            
-            <div class="grid" style="grid-template-columns:1fr;">
-                 <label>🔋 Capacità Batteria Auto (kWh)</label>
-                 <input type="number" id="conf_cap" step="0.1" placeholder="Es. 43.2">
-            </div>
-            
-            <hr style="border:0; border-top:1px solid #ccc; margin:15px 0;">
-            
-            <label style="color:var(--expense)">⛽ PARAMETRI DI CONFRONTO (Termico)</label>
-            <div class="grid">
-                 <div>
-                    <label>Consumo (Litri/100km)</label>
-                    <input type="number" id="conf_diesel_l100" step="0.1" placeholder="Es. 5.5">
-                 </div>
-                 <div style="display:flex; align-items:flex-end;">
-                     <span style="font-size:0.7em; color:#777; padding-bottom:15px;">(Es. 5.5 L/100km ≈ 18 km/l)</span>
-                 </div>
-            </div>
-
-            <hr style="border:0; border-top:1px solid #ccc; margin:15px 0;">
-
-            <label style="color:var(--consumption)">🚙 PARAMETRI STIMA EV</label>
-             <div class="grid">
-                 <div>
-                    <label>Consumo Medio (kWh/100km)</label>
-                    <input type="number" id="conf_cons_ev" step="0.1" placeholder="Es. 15.5">
-                 </div>
-            </div>
+            <p style="font-size:0.8em; color:#555; margin-top:0;">Parametri Calcolo</p>
+            <div class="grid"><div><label>🔋 Capacità Batteria (kWh)</label><input type="number" id="conf_cap" step="0.1"></div></div>
+            <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
+            <label style="color:var(--expense); font-size:0.8em; font-weight:bold;">⛽ CONFRONTO TERMICO</label>
+            <div class="grid"><div><label>Litri/100km</label><input type="number" id="conf_diesel_l100" step="0.1"></div></div>
+            <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
+            <label style="color:var(--consumption); font-size:0.8em; font-weight:bold;">🚙 STIMA EV</label>
+            <div class="grid"><div><label>kWh/100km</label><input type="number" id="conf_cons_ev" step="0.1"></div></div>
         </div>
-        
-        <button class="main-btn" style="background:var(--setting)" onclick="salvaConfig()">💾 Salva Impostazioni</button>
+        <button class="main-btn" style="background:var(--setting)" onclick="salvaConfig()">💾 Salva Config</button>
     </div>
 </div>
 
 <div class="history-card">
     <div class="stats-summary">
-        <div class="stat-small">
-            <small>SPESA TOT.</small><br>
-            <b id="totSpesa" style="color:var(--expense)">€ 0.00</b>
-            <span class="stat-detail">
-                🏠 €<span id="totSpesaCasa">0</span> | ⛽ €<span id="totSpesaCol">0</span>
-            </span>
-        </div>
-        <div class="stat-small">
-            <small>TEMPO RICARICA</small><br>
-            <b id="totTempo" style="color:var(--time)">0h 0m</b>
-            <span class="stat-detail">
-                🏠 <span id="tempoCasa">0h</span> | ⛽ <span id="tempoCol">0h</span>
-            </span>
-        </div>
-        <div class="stat-small">
-            <small>RISPARMIO NETTO</small><br>
-            <b id="totRisp" style="color:var(--save)">€ 0.00</b>
-            <span class="stat-detail">(vs Termico)</span>
-        </div>
-        <div class="stat-small">
-            <small id="labelAnnoKwh">kWh 2026</small><br>
-            <b id="totKwhAnno" style="color:var(--check)">0.0</b>
-            <span class="stat-detail">
-                🏠 <span id="totKwhCasa">0</span> | ⛽ <span id="totKwhCol">0</span>
-            </span>
-        </div>
         <div class="stat-small"><small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b></div>
         <div class="stat-small"><small>kWh/100km</small><br><b id="avgConsumo" style="color:var(--consumption)">---</b></div>
+        <div class="stat-small"><small>TEMPO RIC.</small><br><b id="totTempo" style="color:var(--time)">0h 0m</b><span class="stat-detail">🏠<span id="tempoCasa">0h</span> | ⛽<span id="tempoCol">0h</span></span></div>
+        <div class="stat-small"><small id="labelAnnoKwh">kWh 2026</small><br><b id="totKwhAnno" style="color:var(--check)">0.0</b><span class="stat-detail">🏠<span id="totKwhCasa">0</span> | ⛽<span id="totKwhCol">0</span></span></div>
+        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b><span class="stat-detail">(vs Termico)</span></div>
+        <div class="stat-small"><small>SPESA TOT.</small><br><b id="totSpesa" style="color:var(--expense)">€ 0.00</b><span class="stat-detail">🏠€<span id="totSpesaCasa">0</span> | ⛽€<span id="totSpesaCol">0</span> | 🔧€<span id="totSpesaMan">0</span></span></div>
     </div>
-    
     <div class="chart-container"><canvas id="savingsChart"></canvas></div>
-    
     <div class="table-wrapper">
-        <table id="tabella">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Tipo</th>
-                    <th>Km</th>
-                    <th>Diff</th>
-                    <th>Carica %</th>
-                    <th>Orari</th>
-                    <th>Durata</th>
-                    <th>€/kWh</th>
-                    <th>Spesa</th>
-                    <th>Risparmio</th>
-                    <th>Azioni</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <button id="btnShowMore" class="show-more-btn" onclick="toggleShowAll()">⬇️ Mostra tutto lo storico</button>
+        <table id="tabella"><thead><tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>Info</th><th>Orari</th><th>Spesa</th><th>Risp</th><th>Act</th></tr></thead><tbody></tbody></table>
+        <button id="btnShowMore" class="show-more-btn" onclick="toggleShowAll()">⬇️ Mostra tutto</button>
     </div>
-
     <div class="actions-footer">
-        <div id="backupAlert">Ultimo Backup: Mai effettuato</div>
+        <div id="backupAlert">Backup: Mai</div>
         <div class="btn-group">
             <button class="btn-action" style="background:#546e7a" onclick="window.print()">📄 PDF</button>
-            <button class="btn-action" style="background:var(--excel)" onclick="esportaExcel()">📊 Excel</button>
-            <button class="btn-action" style="background:var(--primary)" onclick="document.getElementById('fileInput').click()">📥 Importa</button>
+            <button class="btn-action" style="background:var(--excel)" onclick="esportaExcel()">📊 Export</button>
+            <button class="btn-action" style="background:var(--primary)" onclick="document.getElementById('fileInput').click()">📥 Import CSV</button>
             <input type="file" id="fileInput" style="display:none" accept=".csv" onchange="importaCSV(event)">
             <button style="background:none; border:none; color:red; font-size:0.7em;" onclick="pulisci()">Reset DB</button>
         </div>
@@ -288,121 +245,105 @@
 </div>
 
 <script>
-// CONFIGURAZIONE DI DEFAULT
-const DEFAULT_CONFIG = {
-    cap: 43.2,          // Capacità Batteria kWh
-    consTermico: 5.5,   // Litri per 100km (Equivale a circa 18 km/l)
-    consEv: 15.5,       // kWh per 100km (teorico per calcoli risparmio)
-    efficienza: 0.86    // Efficienza ricarica
-};
-
-const DB_NAME = 'ev_monitor_v3_full';
-const CONF_NAME = 'ev_config_v3';
+const DEFAULT_CONFIG = { cap: 43.2, consTermico: 5.5, consEv: 15.5, efficienza: 0.86 };
+const DB_NAME = 'ev_monitor_v5_5';
+const CONF_NAME = 'ev_config_v5_5';
 let appConfig = {};
 let myChart = null;
 let showAllHistory = false;
 
-function loadConfig() {
-    const saved = localStorage.getItem(CONF_NAME);
-    if(saved) {
-        appConfig = JSON.parse(saved);
-    } else {
-        appConfig = {...DEFAULT_CONFIG};
+window.onload = function() {
+    loadConfig();
+    const today = new Date().toISOString().split('T')[0];
+    ['data_inserimento', 'chk_data', 'man_data'].forEach(id => document.getElementById(id).value = today);
+    const pref = JSON.parse(localStorage.getItem('ev_pref_v5_5'));
+    if(pref) {
+        document.getElementById('pLuce').value = pref.pL || ''; document.getElementById('pDiesel').value = pref.pD || '';
+        document.getElementById('pKw_stima').value = pref.pKw || 2.3; document.getElementById('pKw_carica').value = pref.pKw || 2.3;
     }
-    // Aggiorna UI Setup
+    render();
+};
+
+function loadConfig() {
+    appConfig = JSON.parse(localStorage.getItem(CONF_NAME)) || {...DEFAULT_CONFIG};
     document.getElementById('conf_cap').value = appConfig.cap;
     document.getElementById('conf_diesel_l100').value = appConfig.consTermico;
     document.getElementById('conf_cons_ev').value = appConfig.consEv;
-    document.getElementById('lblModelBadge').innerText = `Batt: ${appConfig.cap} kWh | Cfr: ${appConfig.consTermico} L/100km`;
+    document.getElementById('lblModelBadge').innerText = `Batt: ${appConfig.cap} kWh`;
 }
 
 function salvaConfig() {
-    const newCap = parseFloat(document.getElementById('conf_cap').value);
-    const newDiesel = parseFloat(document.getElementById('conf_diesel_l100').value);
-    const newEv = parseFloat(document.getElementById('conf_cons_ev').value);
-    
-    if(isNaN(newCap) || isNaN(newDiesel) || isNaN(newEv)) return alert("Inserisci valori numerici validi.");
-    
-    appConfig.cap = newCap;
-    appConfig.consTermico = newDiesel;
-    appConfig.consEv = newEv;
-    
+    appConfig.cap = parseFloat(document.getElementById('conf_cap').value) || 43.2;
+    appConfig.consTermico = parseFloat(document.getElementById('conf_diesel_l100').value) || 5.5;
+    appConfig.consEv = parseFloat(document.getElementById('conf_cons_ev').value) || 15.5;
     localStorage.setItem(CONF_NAME, JSON.stringify(appConfig));
-    alert("Impostazioni salvate! I futuri calcoli useranno questi parametri.");
-    loadConfig();
-    openTab('stima'); // Torna alla home
+    alert("Salvato!"); loadConfig(); openTab('stima');
 }
 
 function openTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
-    // Trova il bottone giusto (un po' trick perche settings ha un colore diverso)
     const btns = document.querySelectorAll('.tab');
     btns.forEach(b => { if(b.getAttribute('onclick').includes(name)) b.classList.add('active'); });
-    
     document.getElementById(name).classList.add('active');
+    if(name === 'bolletta') calcolaBolletta();
+}
+
+function parseLocalNum(str) {
+    if(!str) return 0;
+    let s = String(str).replace(/[€"'\s]/g, '');
+    if (s.indexOf(',') > -1 && s.indexOf('.') === -1) s = s.replace(',', '.');
+    else if (s.indexOf(',') > -1 && s.indexOf('.') > -1) s = s.replace(/\./g, '').replace(',', '.');
+    return parseFloat(s) || 0;
 }
 
 function syncPower(val) {
-    if(document.activeElement.id !== 'pKw_stima') document.getElementById('pKw_stima').value = val;
-    if(document.activeElement.id !== 'pKw_carica') document.getElementById('pKw_carica').value = val;
+    document.getElementById('pKw_stima').value = val;
+    document.getElementById('pKw_carica').value = val;
     calcolaStima();
 }
 
 function stepPower(delta) {
-    const el = document.getElementById('pKw_stima');
-    let current = parseFloat(el.value) || 1.4;
-    current = Math.max(0.1, current + delta);
-    const valFixed = current.toFixed(1);
-    document.getElementById('pKw_stima').value = valFixed;
-    document.getElementById('pKw_carica').value = valFixed;
-    calcolaStima();
+    let currentVal = parseLocalNum(document.getElementById('pKw_stima').value) || 1.4;
+    let newVal = Math.max(0.1, currentVal + delta).toFixed(1);
+    syncPower(newVal);
 }
 
 function calcolaStima() {
     const att = parseFloat(document.getElementById('s_att').value) || 0;
     const tar = parseFloat(document.getElementById('s_tar').value) || 0;
-    const kw = parseFloat(document.getElementById('pKw_stima').value) || 1.4;
+    const kw = parseLocalNum(document.getElementById('pKw_stima').value) || 1.4;
     
-    document.getElementById('resKwhStima').innerText = "0 kWh";
-    document.getElementById('resTempo').innerText = "-";
-    document.getElementById('resOrarioAvvio').innerText = "--:--";
-
     if (tar > att) {
-        // Usa la capacità da configurazione
         const kwh = appConfig.cap * (tar - att) / 100;
-        const oreDec = (kwh / kw) / appConfig.efficienza;
-        const totalMinutes = oreDec * 60;
+        const oreDec = (kwh / kw); 
         
         document.getElementById('resKwhStima').innerText = kwh.toFixed(1) + " kWh";
         document.getElementById('resTempo').innerText = Math.floor(oreDec) + "h " + Math.round((oreDec % 1)*60) + "m";
-
+        
         const orarioFine = document.getElementById('s_orario_fine').value;
         if (orarioFine) {
             const [h, m] = orarioFine.split(':').map(Number);
             const now = new Date();
-            const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
-            const startDate = new Date(targetDate.getTime() - (totalMinutes * 60000));
-            const hStart = String(startDate.getHours()).padStart(2, '0');
-            const mStart = String(startDate.getMinutes()).padStart(2, '0');
-            document.getElementById('resOrarioAvvio').innerText = `${hStart}:${mStart}`;
+            let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+            if(targetDate < now) targetDate.setDate(targetDate.getDate() + 1);
+            const startDate = new Date(targetDate.getTime() - (oreDec * 3600000));
+            document.getElementById('resOrarioAvvio').innerText = String(startDate.getHours()).padStart(2,'0') + ":" + String(startDate.getMinutes()).padStart(2,'0');
         }
+    } else {
+        document.getElementById('resKwhStima').innerText = "0 kWh"; 
+        document.getElementById('resTempo').innerText = "-"; 
+        document.getElementById('resOrarioAvvio').innerText = "--:--";
     }
 }
 
-function calcolaMinuti(start, end) {
-    if (!start || !end) return 0;
+function fmtMinuti(min) { return min ? `${Math.floor(min/60)}h ${min%60}m` : '-'; }
+function calcDiffMin(start, end) {
+    if(!start || !end) return 0;
     const [h1, m1] = start.split(':').map(Number);
     const [h2, m2] = end.split(':').map(Number);
-    let min1 = h1 * 60 + m1;
-    let min2 = h2 * 60 + m2;
-    let diff = min2 - min1;
-    if (diff < 0) diff += 1440;
-    return diff;
-}
-
-function fmtMinuti(min) {
-    return `${Math.floor(min / 60)}h ${min % 60}m`;
+    let diff = (h2*60+m2) - (h1*60+m1);
+    return diff < 0 ? diff + 1440 : diff;
 }
 
 function salvaRicarica() {
@@ -417,29 +358,23 @@ function salvaRicarica() {
     const tEnd = document.getElementById('t_end').value;
     const luogo = document.querySelector('input[name="luogoRicarica"]:checked').value;
 
-    if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti!");
-    
-    // Calcoli basati su Configurazione
-    const kwhNetti = appConfig.cap * (tar - att) / 100;
-    const spesa = (kwhNetti / appConfig.efficienza) * pL;
-    
-    // Calcolo Risparmio (Logica aggiornata L/100km)
-    // Km teorici percorsi con questa ricarica = (kwhNetti / ConsumoEv_per_100km) * 100
-    const kmTeorici = (kwhNetti / appConfig.consEv) * 100;
-    // Litri necessari per fare quei km = (kmTeorici / 100) * ConsumoTermico_L100km
-    const litriNec = (kmTeorici / 100) * appConfig.consTermico;
-    const costoTermico = litriNec * pD;
+    if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti");
+
+    const kwh = appConfig.cap * (tar - att) / 100;
+    const spesa = (kwh / appConfig.efficienza) * pL;
+    const kmTeorici = (kwh / appConfig.consEv) * 100;
+    const costoTermico = (kmTeorici / 100) * appConfig.consTermico * pD;
     const risp = costoTermico - spesa;
-    
+
     const record = {
-        tipo: 'RICARICA', luogo: luogo, isoDate: dataIn.toISOString(),
-        data: dataIn.toLocaleDateString('it-IT'), km: km,
-        batt: att + "%→" + tar + "%", c_att: att, c_tar: tar,
-        t_start: tStart, t_end: tEnd, tempo: fmtMinuti(calcolaMinuti(tStart, tEnd)),
-        prezzoLuce: pL, prezzoDiesel: pD, pKw: pKw, spesa: spesa, risp: risp, kwh: kwhNetti
+        tipo: 'RICARICA', luogo, isoDate: dataIn.toISOString(),
+        data: dataIn.toLocaleDateString('it-IT'), km,
+        batt: `${att}%→${tar}%`, c_att: att, c_tar: tar,
+        t_start: tStart, t_end: tEnd, tempo: fmtMinuti(calcDiffMin(tStart, tEnd)),
+        prezzoLuce: pL, prezzoDiesel: pD, pKw, spesa, risp, kwh
     };
     saveToDb(record, 'editIndex');
-    localStorage.setItem('ev_pref_v3', JSON.stringify({pL, pD, pKw}));
+    localStorage.setItem('ev_pref_v5_5', JSON.stringify({pL, pD, pKw}));
     annullaModifica();
 }
 
@@ -448,24 +383,36 @@ function salvaCheck() {
     const km = parseFloat(document.getElementById('chk_km').value);
     const perc = document.getElementById('chk_perc').value;
     const mode = document.getElementById('chk_mode').value;
-    
-    if (isNaN(km) || !perc) return alert("Dati incompleti!");
-    
+    if (isNaN(km)) return alert("Inserisci i Km");
     const record = { 
-        tipo: 'CHECK', luogo: '-', isoDate: dataIn.toISOString(),
-        data: dataIn.toLocaleDateString('it-IT'), km: km, batt: perc + "%", chk_raw: perc,
-        mode: mode, tempo: "-", spesa: 0, risp: 0, kwh: 0 
+        tipo: 'CHECK', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'),
+        km, batt: perc+"%", chk_raw: perc, mode, spesa:0, risp:0, kwh:0
     };
     saveToDb(record, 'editCheckIndex');
     annullaModificaCheck();
 }
 
+function salvaManutenzione() {
+    const dataIn = document.getElementById('man_data').valueAsDate || new Date();
+    const tipo = document.getElementById('man_tipo').value;
+    const costo = parseFloat(document.getElementById('man_costo').value);
+    const km = parseFloat(document.getElementById('man_km').value);
+    const note = document.getElementById('man_note').value;
+    if(isNaN(costo)) return alert("Inserisci il costo");
+    const record = {
+        tipo: 'MANUTENZIONE', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'),
+        km: km || 0, man_tipo: tipo, spesa: costo, risp: 0, kwh: 0, note: note
+    };
+    saveToDb(record, 'editMaintIndex');
+    annullaModificaMaint();
+}
+
 function saveToDb(record, indexFieldId) {
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const idx = parseInt(document.getElementById(indexFieldId).value);
-    if (idx > -1) { h[idx] = record; } else { h.push(record); }
+    if (idx > -1) h[idx] = record; else h.push(record);
     h.sort((a, b) => {
-        if (b.km !== a.km) return b.km - a.km; 
+        if ((b.km||0) !== (a.km||0)) return (b.km||0) - (a.km||0);
         return new Date(b.isoDate) - new Date(a.isoDate);
     });
     localStorage.setItem(DB_NAME, JSON.stringify(h));
@@ -475,92 +422,95 @@ function saveToDb(record, indexFieldId) {
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
-    const annoCorrente = new Date().getFullYear();
-    document.getElementById('labelAnnoKwh').innerText = "kWh " + annoCorrente;
-    document.getElementById('backupAlert').innerText = "Ultimo Backup: " + (localStorage.getItem('lastBackupDate') || "Mai");
+    const curYear = new Date().getFullYear();
+    document.getElementById('labelAnnoKwh').innerText = "kWh " + curYear;
+    document.getElementById('backupAlert').innerText = "Backup: " + (localStorage.getItem('lastBackupDate') || "Mai");
 
-    let kwhAnno = 0, kwhCasa = 0, kwhCol = 0, totSpesa = 0, totRispNetto = 0, totCasa = 0, totCol = 0;
-    let minutiTot = 0, minutiCasa = 0, minutiCol = 0;
-    let chartLabels = [], chartDataSpesa = [], chartDataRisp = [];
+    let kwhY=0, spesaTot=0, rispTot=0, totCasa=0, totCol=0, manutTot=0, minTot=0, minCasa=0, minCol=0, kwhCasa=0, kwhCol=0;
+    let chartLab=[], chartS=[], chartR=[];
 
-    [...h].reverse().forEach(r => { 
-        if(r.tipo === 'RICARICA') { 
-            totSpesa += r.spesa;
-            totRispNetto += r.risp;
-            const luogo = r.luogo || 'DOMESTICA';
-            // Usa l'efficienza salvata o default se vecchia versione
-            const kwhLordo = (r.kwh / appConfig.efficienza);
-            const minutiRicarica = calcolaMinuti(r.t_start, r.t_end);
-            minutiTot += minutiRicarica;
-            if (luogo === 'DOMESTICA') { totCasa += r.spesa; minutiCasa += minutiRicarica; } 
-            else { totCol += r.spesa; minutiCol += minutiRicarica; }
+    [...h].reverse().forEach(r => {
+        if(r.tipo === 'RICARICA') {
+            spesaTot += (r.spesa||0); rispTot += (r.risp||0);
+            chartLab.push(r.data); chartS.push(r.spesa.toFixed(2)); chartR.push(r.risp.toFixed(2));
+            
+            let y = r.isoDate ? new Date(r.isoDate).getFullYear() : parseInt(r.data.split('/')[2]);
+            let isCurYear = (y === curYear);
+            if(isCurYear) kwhY += (r.kwh||0);
 
-            chartLabels.push(r.data); chartDataSpesa.push(r.spesa.toFixed(2)); chartDataRisp.push(r.risp.toFixed(2));
-            let a = r.isoDate ? new Date(r.isoDate).getFullYear() : parseInt(r.data.split('/')[2]);
-            if (a === annoCorrente) {
-                kwhAnno += kwhLordo;
-                if (luogo === 'DOMESTICA') kwhCasa += kwhLordo; else kwhCol += kwhLordo;
-            }
-        } 
+            let mins = calcDiffMin(r.t_start, r.t_end);
+            minTot += mins;
+            if(r.luogo === 'COLONNINA') { totCol += r.spesa; minCol += mins; if(isCurYear) kwhCol += r.kwh; } 
+            else { totCasa += r.spesa; minCasa += mins; if(isCurYear) kwhCasa += r.kwh; }
+        } else if(r.tipo === 'MANUTENZIONE') {
+            manutTot += (r.spesa||0);
+        }
     });
-    updateChart(chartLabels, chartDataSpesa, chartDataRisp);
+
+    updateChart(chartLab, chartS, chartR);
 
     const limit = showAllHistory ? h.length : 10;
-    const visibleData = h.slice(0, limit);
     const btnMore = document.getElementById('btnShowMore');
-    if(h.length > 10) {
-        btnMore.style.display = 'block';
-        btnMore.innerText = showAllHistory ? "⬆️ Riduci elenco" : "⬇️ Mostra tutto storico (" + h.length + ")";
-    } else { btnMore.style.display = 'none'; }
+    btnMore.innerText = showAllHistory ? "⬆️ Riduci" : `⬇️ Mostra tutto (${h.length})`;
+    btnMore.style.display = h.length > 10 ? 'block' : 'none';
 
-    tb.innerHTML = visibleData.map((r, i) => {
-        let originalIndex = h.indexOf(r);
-        let delta = h[originalIndex+1] ? r.km - h[originalIndex+1].km : 0;
-        let rispColor = r.risp >= 0 ? 'var(--save)' : 'var(--expense)';
-        let rispTesto = r.risp !== 0 ? '€' + r.risp.toFixed(2) : '-';
-        
-        let badgeContent = "";
-        let badgeStyle = "";
+    tb.innerHTML = h.slice(0, limit).map((r, i) => {
+        const idx = h.indexOf(r);
+        let diffKm = 0;
+        for(let k=idx+1; k<h.length; k++){ if(h[k].km > 0) { diffKm = r.km - h[k].km; break; } }
 
-        if(r.tipo === 'CHECK') {
-            const checkColors = { 'ECO': '#ce93d8', 'MISTO': '#ab47bc', 'NORMAL': '#8e24aa', 'SPORT': '#4a148c' };
-            badgeStyle = `background:${checkColors[r.mode] || '#6a1b9a'}`;
-            badgeContent = `📝 CHECK [${r.mode || '?'}]`;
+        let badge = "", info = "", money = "";
+        if(r.tipo === 'RICARICA') {
+            let color = r.luogo === 'COLONNINA' ? '#e65100' : '#2e7d32';
+            badge = `<span style="background:${color}; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">${r.luogo === 'COLONNINA' ? 'COL' : 'HOME'}</span>`;
+            info = r.batt;
+            money = `<span style="color:var(--expense)">€${r.spesa.toFixed(2)}</span>`;
+        } else if (r.tipo === 'CHECK') {
+             const checkColors = { 'ECO': '#ce93d8', 'MISTO': '#ab47bc', 'NORMAL': '#8e24aa', 'SPORT': '#4a148c' };
+             badge = `<span style="background:${checkColors[r.mode]||'#6a1b9a'}; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">CHECK ${r.mode||''}</span>`;
+             info = `${r.batt}`;
+             money = "-";
         } else {
-            badgeStyle = (r.luogo === 'COLONNINA') ? "background:#e65100" : "background:#2e7d32";
-            badgeContent = (r.luogo === 'COLONNINA') ? '⛽ RICARICA' : '🏠 RICARICA';
+             badge = `<span style="background:var(--maint); color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">FIX</span>`;
+             info = `${r.man_tipo}${r.note ? '<br><small><i>'+r.note+'</i></small>' : ''}`;
+             money = `<span style="color:var(--maint)">€${r.spesa.toFixed(2)}</span>`;
         }
 
+        let rispStr = (r.tipo === 'RICARICA' && r.risp !== 0) ? `€${r.risp.toFixed(2)}` : '-';
+
         return `<tr>
-            <td>${r.data}</td>
-            <td><span style="${badgeStyle}; color:white; padding:3px 6px; border-radius:5px; font-size:0.7em; font-weight:bold; display:inline-block; min-width:85px; text-align:center;">${badgeContent}</span></td>
-            <td><b>${r.km}</b></td>
-            <td style="color:var(--accent)">${delta>0?'+'+delta:''}</td>
-            <td>${r.batt}</td>
-            <td style="font-size:0.8em; color:#555;">${r.t_start||'-'}<br>${r.t_end||''}</td>
-            <td>${r.tempo || '-'}</td>
-            <td style="color:#666; font-size:0.8em;">${r.prezzoLuce? '€'+r.prezzoLuce : '-'}</td>
-            <td style="color:var(--expense)">${r.spesa>0?'€'+r.spesa.toFixed(2):'-'}</td>
-            <td style="color:${rispColor}; font-weight:bold;">${rispTesto}</td>
+            <td style="font-size:0.75em">${r.data}</td>
+            <td>${badge}</td>
+            <td><b>${r.km || ''}</b></td>
+            <td style="color:var(--accent); font-size:0.8em">${diffKm>0?'+'+diffKm:''}</td>
+            <td style="font-size:0.8em">${info}</td>
+            <td style="font-size:0.7em; color:#555">${r.t_start||''}<br>${r.t_end||''}</td>
+            <td>${money}</td>
+            <td style="font-weight:bold; font-size:0.8em; color:${r.risp>=0?'var(--save)':'var(--expense)'}">${rispStr}</td>
             <td>
-                <button style="border:none; background:none; cursor:pointer;" onclick="preparaModifica(${originalIndex})">✏️</button>
-                <button style="border:none; background:none; color:red; cursor:pointer;" onclick="elimina(${originalIndex})">🗑️</button>
+                <button style="border:none;background:none;cursor:pointer" onclick="preparaModifica(${idx})">✏️</button>
+                <button style="border:none;background:none;color:red;cursor:pointer" onclick="elimina(${idx})">🗑️</button>
             </td>
         </tr>`;
     }).join('');
 
-    document.getElementById('totSpesa').innerText = "€ " + totSpesa.toFixed(2);
+    let grandTotal = spesaTot + manutTot;
+
+    document.getElementById('totSpesa').innerText = "€ " + grandTotal.toFixed(2);
     document.getElementById('totSpesaCasa').innerText = totCasa.toFixed(2);
     document.getElementById('totSpesaCol').innerText = totCol.toFixed(2);
-    document.getElementById('totTempo').innerText = fmtMinuti(minutiTot);
-    document.getElementById('tempoCasa').innerText = fmtMinuti(minutiCasa);
-    document.getElementById('tempoCol').innerText = fmtMinuti(minutiCol);
-    const rispEl = document.getElementById('totRisp');
-    rispEl.innerText = "€ " + totRispNetto.toFixed(2);
-    rispEl.style.color = totRispNetto >= 0 ? 'var(--save)' : 'var(--expense)';
-    document.getElementById('totKwhAnno').innerText = kwhAnno.toFixed(1);
+    document.getElementById('totSpesaMan').innerText = manutTot.toFixed(2);
+
+    document.getElementById('totTempo').innerText = fmtMinuti(minTot);
+    document.getElementById('tempoCasa').innerText = fmtMinuti(minCasa);
+    document.getElementById('tempoCol').innerText = fmtMinuti(minCol);
+
+    document.getElementById('totRisp').innerText = "€ " + rispTot.toFixed(2);
+    
+    document.getElementById('totKwhAnno').innerText = kwhY.toFixed(1);
     document.getElementById('totKwhCasa').innerText = kwhCasa.toFixed(1);
     document.getElementById('totKwhCol').innerText = kwhCol.toFixed(1);
+    
     document.getElementById('totKmReali').innerText = h[0]?.km || 0;
     
     let avg = "---";
@@ -568,121 +518,124 @@ function render() {
     if (ricariche.length >= 2) {
         const dist = ricariche[0].km - ricariche[ricariche.length - 1].km;
         let energy = 0;
-        for (let i = 0; i < ricariche.length - 1; i++) energy += ricariche[i].kwh;
+        for (let i = 0; i < ricariche.length - 1; i++) energy += (ricariche[i].kwh||0);
         if (dist > 0) avg = ((energy / dist) * 100).toFixed(1);
     }
     document.getElementById('avgConsumo').innerText = avg;
 }
 
-function updateChart(labels, dataSpesa, dataRisp) {
+function updateChart(l, s, r) {
     const ctx = document.getElementById('savingsChart').getContext('2d');
-    if (myChart) myChart.destroy();
+    if(myChart) myChart.destroy();
     myChart = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Spesa (€)', data: dataSpesa, backgroundColor: '#c62828', stack: '0' },
-                { label: 'Risparmio (€)', data: dataRisp, backgroundColor: '#2e7d32', stack: '0' }
-            ]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: false } } }
+        data: { labels: l, datasets: [{ label:'Spesa', data:s, backgroundColor:'#c62828' }, { label:'Risp.', data:r, backgroundColor:'#2e7d32' }] },
+        options: { maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:false}} }
     });
 }
 
-function preparaModifica(index) {
-    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    let r = h[index];
-    if (r.tipo === 'RICARICA') {
-        openTab('carica');
-        document.getElementById('data_inserimento').value = r.isoDate.split('T')[0];
-        document.getElementById('kmOdo').value = r.km;
-        const radio = document.querySelector(`input[name="luogoRicarica"][value="${r.luogo || 'DOMESTICA'}"]`);
-        if(radio) radio.checked = true;
-        document.getElementById('c_att').value = r.c_att || 0;
-        document.getElementById('c_tar').value = r.c_tar || 0;
-        document.getElementById('t_start').value = r.t_start || "";
-        document.getElementById('t_end').value = r.t_end || "";
-        document.getElementById('pKw_carica').value = r.pKw || 1.4;
-        document.getElementById('pLuce').value = r.prezzoLuce || 0.25;
-        document.getElementById('pDiesel').value = r.prezzoDiesel || 1.8;
-        document.getElementById('editIndex').value = index;
-        toggleEditMode('btnSalva', 'btnAnnulla', true);
-    } else {
-        openTab('check');
-        document.getElementById('chk_data').value = r.isoDate.split('T')[0];
-        document.getElementById('chk_km').value = r.km;
-        document.getElementById('chk_perc').value = r.chk_raw || 0;
-        document.getElementById('chk_mode').value = r.mode || 'ECO';
-        document.getElementById('editCheckIndex').value = index;
-        toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', true);
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+function calcolaBolletta() {
+    const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    const dispersion = parseFloat(document.getElementById('dispersionVal').value) || 0;
+    const tbody = document.getElementById('billBody'); tbody.innerHTML = "";
+    let monthly = {};
+    h.forEach(r => {
+        if(r.tipo === 'RICARICA' && r.luogo === 'DOMESTICA') {
+            let k = r.isoDate.substring(0, 7); 
+            if(!monthly[k]) monthly[k] = { kwh:0, spesa:0 };
+            monthly[k].kwh += r.kwh; monthly[k].spesa += r.spesa;
+        }
+    });
+    Object.keys(monthly).sort().reverse().forEach(k => {
+        let m = monthly[k]; let factor = 1 + (dispersion/100);
+        let [y, mo] = k.split('-');
+        let name = new Date(y, mo-1).toLocaleString('it-IT', { month:'long', year:'numeric' });
+        tbody.innerHTML += `<tr><td style="text-transform:capitalize">${name}</td><td>${m.kwh.toFixed(1)}</td><td style="color:#ef6c00">${(m.kwh*factor).toFixed(1)}</td><td style="color:#2e7d32">€${(m.spesa*factor).toFixed(2)}</td></tr>`;
+    });
 }
-
-function toggleEditMode(btnSaveId, btnCancelId, active) {
-    const btn = document.getElementById(btnSaveId);
-    const cancel = document.getElementById(btnCancelId);
-    if(active) { btn.innerText = "🔄 Aggiorna"; btn.classList.add('editing'); cancel.style.display = 'block'; } 
-    else { btn.innerText = (btnSaveId === 'btnSalva') ? "💾 Salva Ricarica" : "📝 Registra Stato"; btn.classList.remove('editing'); cancel.style.display = 'none'; }
-}
-
-function annullaModifica() {
-    document.getElementById('editIndex').value = "-1";
-    toggleEditMode('btnSalva', 'btnAnnulla', false);
-    ["kmOdo","c_att","c_tar","t_start","t_end"].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('data_inserimento').valueAsDate = new Date();
-}
-
-function annullaModificaCheck() {
-    document.getElementById('editCheckIndex').value = "-1";
-    toggleEditMode('btnSalvaCheck', 'btnAnnullaCheck', false);
-    document.getElementById('chk_km').value = ''; document.getElementById('chk_perc').value = '';
-    document.getElementById('chk_data').valueAsDate = new Date();
-}
-
-function toggleShowAll() { showAllHistory = !showAllHistory; render(); }
 
 function esportaExcel() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    let csv = "Data;Tipo;Luogo;Km;Batt;Inizio;Fine;Tempo;Spesa;Risp;Kwh;PrezzoLuce;PrezzoDiesel;Mode;IsoDate\n";
-    h.forEach(r => { csv += `${r.data};${r.tipo};${r.luogo||'DOMESTICA'};${r.km};${r.batt};${r.t_start||''};${r.t_end||''};${r.tempo||''};${r.spesa};${r.risp};${r.kwh};${r.prezzoLuce||''};${r.prezzoDiesel||''};${r.mode||''};${r.isoDate||''}\n` });
-    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    link.download = `ev_monitor_db.csv`; link.click();
-    localStorage.setItem('lastBackupDate', new Date().toLocaleString('it-IT')); render();
+    let csv = "IsoDate;Tipo;Km;Batt;Spesa;Risp;Luogo_ManTipo;Kwh;PrezzoLuce;PrezzoDiesel;PKw;T_Start;T_End;C_Att;C_Tar;Chk_Raw;Mode;Note\n";
+    h.forEach(r => {
+        const s = v => (v === undefined || v === null) ? '' : v;
+        csv += `${s(r.isoDate)};${s(r.tipo)};${s(r.km)};${s(r.batt)};${s(r.spesa)};${s(r.risp)};${s(r.luogo||r.man_tipo)};${s(r.kwh)};${s(r.prezzoLuce)};${s(r.prezzoDiesel)};${s(r.pKw)};${s(r.t_start)};${s(r.t_end)};${s(r.c_att)};${s(r.c_tar)};${s(r.chk_raw)};${s(r.mode)};${s(r.note)}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = "ev_backup_final.csv"; a.click();
+    localStorage.setItem('lastBackupDate', new Date().toLocaleDateString());
+    render();
 }
 
 function importaCSV(event) {
+    const file = event.target.files[0];
+    if(!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = function(e) {
         const rows = e.target.result.split('\n');
-        let data = [];
+        if(rows.length < 2) return alert("File vuoto");
+        let imported = [];
         for(let i=1; i<rows.length; i++) {
-            const c = rows[i].split(';'); if(c.length < 10) continue;
-            data.push({ 
-                data: c[0], tipo: c[1], luogo: c[2], km: parseFloat(c[3]), batt: c[4], 
-                t_start: c[5]||'', t_end: c[6]||'', tempo: c[7], 
-                spesa: parseFloat(c[8]), risp: parseFloat(c[9]), kwh: parseFloat(c[10]||0), 
-                prezzoLuce: parseFloat(c[11]||0), prezzoDiesel: parseFloat(c[12]||0), 
-                mode: c[13] || '', isoDate: c[14]||new Date().toISOString() 
-            });
+            let row = rows[i].trim();
+            if(!row) continue;
+            let c = row.split(';');
+            if(c.length < 13) continue; 
+            let tipo = c[1];
+            let rec = {
+                isoDate: c[13] || new Date().toISOString(),
+                data: c[0], tipo: tipo,
+                km: parseLocalNum(c[3]),
+                batt: c[4],
+                spesa: parseLocalNum(c[8]),
+                risp: parseLocalNum(c[9])
+            };
+            if(tipo === 'RICARICA') {
+                rec.luogo = c[2];
+                rec.t_start = c[5]; rec.t_end = c[6]; rec.tempo = c[7];
+                rec.kwh = parseLocalNum(c[10]);
+                rec.prezzoLuce = parseLocalNum(c[11]);
+                rec.prezzoDiesel = parseLocalNum(c[12]);
+                if(c[4] && c[4].includes('→')) {
+                    let p = c[4].replace(/%/g,'').split(/→|->/);
+                    rec.c_att = parseFloat(p[0]); rec.c_tar = parseFloat(p[1]);
+                }
+            } else if (tipo === 'MANUTENZIONE') {
+                rec.man_tipo = c[2];
+            } else if (tipo === 'CHECK') {
+                rec.chk_raw = parseLocalNum(c[4].replace('%',''));
+                rec.mode = 'NORMAL';
+            }
+            imported.push(rec);
         }
-        localStorage.setItem(DB_NAME, JSON.stringify(data)); render();
+        if(imported.length > 0 && confirm(`Importare ${imported.length} record?`)) {
+             imported.sort((a,b) => (b.km - a.km) || (new Date(b.isoDate) - new Date(a.isoDate)));
+             localStorage.setItem(DB_NAME, JSON.stringify(imported));
+             alert("Fatto!"); location.reload();
+        }
     };
-    reader.readAsText(event.target.files[0]);
+    reader.readAsText(file);
 }
 
-function elimina(i) { if(confirm("Eliminare definitivamente?")) { let h = JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME, JSON.stringify(h)); render(); } }
-function pulisci() { if(confirm("Cancellare tutto il DB?")) { localStorage.removeItem(DB_NAME); render(); } }
-
-window.onload = () => {
-    loadConfig();
-    const p = JSON.parse(localStorage.getItem('ev_pref_v3')) || {pL: 0.25, pD: 1.80, pKw: 1.4};
-    document.getElementById('pLuce').value = p.pL; document.getElementById('pDiesel').value = p.pD;
-    document.getElementById('data_inserimento').valueAsDate = new Date();
-    document.getElementById('chk_data').valueAsDate = new Date();
-    syncPower(p.pKw); render();
-};
+function preparaModifica(i) {
+    let h = JSON.parse(localStorage.getItem(DB_NAME)), r = h[i];
+    if(r.tipo==='RICARICA'){
+        openTab('carica'); document.getElementById('editIndex').value=i; document.getElementById('data_inserimento').value=r.isoDate.split('T')[0]; document.getElementById('kmOdo').value=r.km; document.getElementById('pLuce').value=r.prezzoLuce; document.getElementById('c_att').value=r.c_att; document.getElementById('c_tar').value=r.c_tar; toggleEdit('btnSalva','btnAnnulla',true);
+        // Pre-fill delle stringhe potenza (per virgola)
+        document.getElementById('pKw_carica').value = r.pKw || '';
+    } else if(r.tipo==='MANUTENZIONE'){
+        openTab('manutenzione'); document.getElementById('editMaintIndex').value=i; document.getElementById('man_data').value=r.isoDate.split('T')[0]; document.getElementById('man_costo').value=r.spesa; document.getElementById('man_km').value=r.km; document.getElementById('man_note').value=r.note||''; toggleEdit('btnSalvaMaint','btnAnnullaMaint',true);
+    } else {
+        openTab('check'); document.getElementById('editCheckIndex').value=i; document.getElementById('chk_data').value=r.isoDate.split('T')[0]; document.getElementById('chk_km').value=r.km; document.getElementById('chk_perc').value=r.chk_raw; toggleEdit('btnSalvaCheck','btnAnnullaCheck',true);
+    }
+}
+function toggleEdit(s,c,on){ document.getElementById(s).innerText=on?"🔄 Aggiorna":"💾 Salva"; document.getElementById(c).style.display=on?'block':'none'; document.getElementById(s).classList.toggle('editing',on); }
+function annullaModifica(){ document.getElementById('editIndex').value=-1; toggleEdit('btnSalva','btnAnnulla',false); }
+function annullaModificaCheck(){ document.getElementById('editCheckIndex').value=-1; toggleEdit('btnSalvaCheck','btnAnnullaCheck',false); }
+function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value=''; }
+function elimina(i){ if(confirm("Eliminare?")){ let h=JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME,JSON.stringify(h)); render(); calcolaBolletta(); }}
+function pulisci(){ if(confirm("Cancellare TUTTO?")){ localStorage.removeItem(DB_NAME); location.reload(); }}
+function toggleShowAll(){ showAllHistory=!showAllHistory; render(); }
 </script>
 </body>
 </html>
