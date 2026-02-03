@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <title>EV MONITOR 741 RA</title>
-    
+    <title>EV Monitor 5.6 Mobile</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #005eb8; --bg: #f4f6f8; --accent: #e65100; --expense: #c62828; --check: #6a1b9a; --consumption: #00838f; --excel: #1d6f42; --edit: #fbc02d; --save: #2e7d32; --time: #5e35b1; --setting: #455a64; --maint: #795548; --bill: #f9a825; }
@@ -48,10 +46,40 @@
         .btn-cancel { display:none; width:100%; margin-top:5px; padding:10px; border:none; background:#ccc; border-radius:10px; font-weight:bold; cursor: pointer; }
         
         .history-card { background: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
-        .stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 15px; }
-        .stat-small { background: #fff; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
-        .stat-detail { font-size: 0.7em; color: #666; margin-top: 3px; display: block; line-height: 1.2; font-weight: bold; }
         
+        /* MODIFICA LAYOUT STATISTICHE PER MOBILE */
+        .stats-summary { 
+            display: grid; 
+            /* Default Desktop: adatta */
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+            gap: 10px; 
+            margin-bottom: 15px; 
+        }
+        
+        .stat-small { 
+            background: #fff; 
+            padding: 12px 8px; /* Più spazio */
+            border-radius: 12px; 
+            text-align: center; 
+            border: 1px solid #eee; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        
+        .stat-small b {
+            font-size: 1.2rem; /* Numeri più grandi */
+            display: block;
+            margin: 3px 0;
+        }
+
+        .stat-detail { font-size: 0.7em; color: #666; display: block; line-height: 1.2; font-weight: bold; }
+        
+        /* Regola specifica per schermi piccoli (telefoni) */
+        @media (max-width: 600px) {
+            .stats-summary {
+                grid-template-columns: 1fr 1fr; /* Forza 2 colonne esatte */
+            }
+        }
+
         .chart-container { width: 100%; height: 300px; margin-bottom: 20px; }
         .table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.8em; min-width: 950px; }
@@ -86,9 +114,7 @@
 <body>
 
 <div class="card">
-    
     <h2>EV MONITOR 741 RA</h2>
-    
     <div class="model-badge" id="lblModelBadge">Ready</div>
     
     <div class="tabs">
@@ -246,8 +272,8 @@
 
 <script>
 const DEFAULT_CONFIG = { cap: 43.2, consTermico: 5.5, consEv: 15.5, efficienza: 0.86 };
-const DB_NAME = 'ev_monitor_v5_5';
-const CONF_NAME = 'ev_config_v5_5';
+const DB_NAME = 'ev_monitor_v5_6';
+const CONF_NAME = 'ev_config_v5_6';
 let appConfig = {};
 let myChart = null;
 let showAllHistory = false;
@@ -256,7 +282,7 @@ window.onload = function() {
     loadConfig();
     const today = new Date().toISOString().split('T')[0];
     ['data_inserimento', 'chk_data', 'man_data'].forEach(id => document.getElementById(id).value = today);
-    const pref = JSON.parse(localStorage.getItem('ev_pref_v5_5'));
+    const pref = JSON.parse(localStorage.getItem('ev_pref_v5_6'));
     if(pref) {
         document.getElementById('pLuce').value = pref.pL || ''; document.getElementById('pDiesel').value = pref.pD || '';
         document.getElementById('pKw_stima').value = pref.pKw || 2.3; document.getElementById('pKw_carica').value = pref.pKw || 2.3;
@@ -374,7 +400,7 @@ function salvaRicarica() {
         prezzoLuce: pL, prezzoDiesel: pD, pKw, spesa, risp, kwh
     };
     saveToDb(record, 'editIndex');
-    localStorage.setItem('ev_pref_v5_5', JSON.stringify({pL, pD, pKw}));
+    localStorage.setItem('ev_pref_v5_6', JSON.stringify({pL, pD, pKw}));
     annullaModifica();
 }
 
