@@ -14,7 +14,7 @@
         body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 15px; color: #333; margin: 0; }
         .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 550px; width: 100%; margin-bottom: 20px; border-top: 5px solid var(--primary); box-sizing: border-box; }
         h2 { color: var(--primary); text-align: center; margin: 0; font-size: 1.4rem; }
-        .model-badge { text-align: center; font-size: 0.75em; color: #888; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        .model-badge { text-align: center; font-size: 0.75em; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
         
         .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 12px; flex-wrap: wrap; justify-content: center; }
         .tab { flex: 1; padding: 8px 4px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: none; color: #666; font-size: 0.75em; min-width: 60px; white-space: nowrap; }
@@ -48,10 +48,10 @@
         .btn-cancel { display:none; width:100%; margin-top:5px; padding:10px; border:none; background:#ccc; border-radius:10px; font-weight:bold; cursor: pointer; }
         
         .history-card { background: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
-        .stats-summary { display: grid; 
-    grid-template-columns: 1fr 1fr; /* Forza esattamente 2 colonne */
-    gap: 8px; 
-    margin-bottom: 15px; }
+        
+        /* LAYOUT STATISTICHE: 2 COLONNE PER 3 RIGHE */
+        .stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        
         .stat-small { background: #fff; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
         .stat-detail { font-size: 0.7em; color: #666; margin-top: 3px; display: block; line-height: 1.2; font-weight: bold; }
         
@@ -74,6 +74,22 @@
         .bill-table td { padding: 8px; text-align: center; border-bottom: 1px solid #eee; }
         .dispersion-box { background: #fff8e1; border: 1px solid #ffecb3; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center; }
 
+        /* STILE TASTO INFO INSTAGRAM */
+        .info-btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.75em;
+            padding: 6px 12px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .info-btn:active { transform: scale(0.95); }
+
         @media print {
             body { background: white; padding: 0; }
             .card, .tabs, .form-section, .actions-footer, .show-more-btn { display: none !important; }
@@ -93,6 +109,12 @@
     <h2>EV MONITOR 741 RA</h2>
     
     <div class="model-badge" id="lblModelBadge">Ready</div>
+
+    <div style="text-align: center; margin-bottom: 10px;">
+        <a href="https://ig.me/m/brigantelucano" target="_blank" class="info-btn">
+            ℹ️ Info / Contattami
+        </a>
+    </div>
     
     <div class="tabs">
         <button class="tab active" onclick="openTab('stima')">⏱️ Stima</button>
@@ -566,7 +588,8 @@ function esportaExcel() {
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = "ev_backup_final.csv"; a.click();
+    const a = document.createElement('a'); a.href = url;
+    a.download = "ev_backup_final.csv"; a.click();
     localStorage.setItem('lastBackupDate', new Date().toLocaleDateString());
     render();
 }
@@ -592,6 +615,7 @@ function importaCSV(event) {
                 batt: c[4],
                 spesa: parseLocalNum(c[8]),
                 risp: parseLocalNum(c[9])
+            
             };
             if(tipo === 'RICARICA') {
                 rec.luogo = c[2];
@@ -635,10 +659,152 @@ function preparaModifica(i) {
 function toggleEdit(s,c,on){ document.getElementById(s).innerText=on?"🔄 Aggiorna":"💾 Salva"; document.getElementById(c).style.display=on?'block':'none'; document.getElementById(s).classList.toggle('editing',on); }
 function annullaModifica(){ document.getElementById('editIndex').value=-1; toggleEdit('btnSalva','btnAnnulla',false); }
 function annullaModificaCheck(){ document.getElementById('editCheckIndex').value=-1; toggleEdit('btnSalvaCheck','btnAnnullaCheck',false); }
-function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value=''; }
+function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value='';
+}
 function elimina(i){ if(confirm("Eliminare?")){ let h=JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME,JSON.stringify(h)); render(); calcolaBolletta(); }}
 function pulisci(){ if(confirm("Cancellare TUTTO?")){ localStorage.removeItem(DB_NAME); location.reload(); }}
 function toggleShowAll(){ showAllHistory=!showAllHistory; render(); }
+</script>
+<a href="https://ko-fi.com/briglucano" target="_blank" class="kofi-fixed-btn">
+  ☕ Offri un caffè allo staff!!!
+</a>
+
+<div id="kofi-popup-overlay" class="kofi-overlay" style="display: none;">
+  <div class="kofi-box">
+    <span class="kofi-close" onclick="closeKofiPopup()">&times;</span>
+    <div class="kofi-content">
+      <h3>Ti piace la nostra App?
+💙</h3>
+      <p>
+        Se apprezzi il nostro lavoro, puoi supportarci con una piccola mancia simbolica.
+Ci aiuta a mantenere il servizio attivo!
+      </p>
+      
+      <a href="https://ko-fi.com/briglucano" target="_blank" class="kofi-popup-btn">
+        ☕ Offri un caffè allo staff!!!
+</a>
+      
+      <p class="kofi-footer">Grazie per il supporto!</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* --- STILE TASTINO FISSO (BLU) --- */
+  .kofi-fixed-btn {
+    position: fixed;
+bottom: 20px;
+    right: 20px;
+    z-index: 9998;
+    background-color: #29abe0; /* Blu Ko-fi */
+    color: white !important;
+    text-decoration: none;
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 12px 25px;
+    border-radius: 50px;
+box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    border: 2px solid white;
+}
+  
+  .kofi-fixed-btn:hover {
+    background-color: #1a9cd0;
+/* Blu più scuro al passaggio del mouse */
+    transform: scale(1.05) translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+  /* --- STILE POPUP --- */
+  .kofi-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    display: flex;
+/* Usiamo Flexbox per centrare */
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+    animation: kofiFadeIn 0.5s;
+}
+
+  .kofi-box {
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    padding: 30px;
+    border-radius: 16px;
+    text-align: center;
+position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+  .kofi-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    color: #aaa;
+    cursor: pointer;
+line-height: 1;
+  }
+  .kofi-close:hover { color: #333; }
+
+  .kofi-content h3 { margin-top: 0; color: #333; margin-bottom: 10px;
+}
+  .kofi-content p { color: #666; font-size: 15px; line-height: 1.5; margin-bottom: 25px; }
+  .kofi-footer { font-size: 12px;
+color: #999; margin-top: 15px; }
+
+  .kofi-popup-btn {
+    display: inline-block;
+    background-color: #29abe0;
+/* Blu Ko-fi */
+    color: white !important;
+    text-decoration: none;
+    font-weight: bold;
+    padding: 12px 30px;
+    border-radius: 50px;
+font-size: 16px;
+    transition: 0.2s;
+    box-shadow: 0 5px 15px rgba(41, 171, 224, 0.4);
+}
+  .kofi-popup-btn:hover {
+    background-color: #1a9cd0;
+    transform: translateY(-2px);
+}
+
+  @keyframes kofiFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1;
+}
+  }
+  
+  @media (max-width: 350px) {
+    .kofi-fixed-btn { bottom: 10px; right: 10px;
+font-size: 12px; padding: 10px 15px; }
+  }
+</style>
+
+<script>
+  function closeKofiPopup() {
+    document.getElementById('kofi-popup-overlay').style.display = 'none';
+}
+
+  function openKofiPopup() {
+    document.getElementById('kofi-popup-overlay').style.display = 'flex';
+}
+
+  // Timer impostato a 30000 ms (30 secondi)
+  window.addEventListener('load', function() {
+    setTimeout(openKofiPopup, 30000);
+  });
 </script>
 </body>
 </html>
