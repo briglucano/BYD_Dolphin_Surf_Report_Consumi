@@ -62,7 +62,8 @@
         td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
         
         .show-more-btn { width: 100%; padding: 10px; background: #f0f4f8; border: none; color: var(--primary); font-weight: bold; border-radius: 0 0 10px 10px; cursor: pointer; margin-top: 5px; }
-        .actions-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; }
+        
+        .actions-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
         .btn-action { padding: 10px 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.75em; color: white; display: flex; align-items: center; gap: 5px; text-decoration: none; }
         #backupAlert { color: #c62828; font-weight: bold; font-size: 0.85em; background: #ffebee; padding: 5px 15px; border-radius: 20px; border: 1px solid #ffcdd2; }
@@ -73,6 +74,27 @@
         .bill-table th { background: #fff3e0; color: #ef6c00; padding: 8px; }
         .bill-table td { padding: 8px; text-align: center; border-bottom: 1px solid #eee; }
         .dispersion-box { background: #fff8e1; border: 1px solid #ffecb3; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center; }
+
+        /* GRIGLIA PULSANTI IMPOSTAZIONI */
+        .settings-row { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
+        .settings-row > * { flex: 1; margin-top: 0 !important; }
+        
+        /* STILE TASTO CAFFE */
+        .btn-caffe-large {
+            background-color: #29abe0;
+            color: white !important;
+            font-size: 1rem;
+            padding: 12px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(41, 171, 224, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .btn-caffe-large:active { transform: scale(0.95); }
 
         /* STILE TASTO INFO INSTAGRAM */
         .info-btn {
@@ -269,6 +291,7 @@
             <div class="grid"><div><label>kWh/100km</label><input type="number" id="conf_cons_ev" step="0.1"></div></div>
         </div>
         <button class="main-btn" style="background:var(--setting)" onclick="salvaConfig()">💾 Salva Config</button>
+        <button class="main-btn" onclick="esportaExcel()" style="background: var(--excel);">📊 Export Backup</button>
     </div>
 </div>
 
@@ -287,14 +310,16 @@
         <button id="btnShowMore" class="show-more-btn" onclick="toggleShowAll()">⬇️ Mostra tutto</button>
     </div>
     <div class="actions-footer">
-        <div id="backupAlert">Backup: Mai</div>
+        
+        <a href="https://ko-fi.com/briglucano" target="_blank" class="btn-caffe-large">
+            ☕ Offri un Caffè
+        </a>
+        
+        <div id="backupAlert" style="margin-top:10px;">Backup: Mai</div>
         <div class="btn-group">
             <button class="btn-action" style="background:#546e7a" onclick="window.print()">📄 PDF</button>
             <button class="btn-action" style="background:var(--excel)" onclick="esportaExcel()">📊 Export</button>
             <button class="btn-action" style="background:var(--primary)" onclick="document.getElementById('fileInput').click()">📥 Import CSV</button>
-            
-            <a href="https://ko-fi.com/briglucano" target="_blank" class="btn-action" style="background:#29abe0; text-decoration:none;">☕ Offri un Caffè </a>
-            
             <input type="file" id="fileInput" style="display:none" accept=".csv" onchange="importaCSV(event)">
             <button style="background:none; border:none; color:red; font-size:0.7em;" onclick="pulisci()">Reset DB</button>
         </div>
@@ -501,13 +526,27 @@ function render() {
     document.getElementById('labelAnnoKwh').innerText = "kWh " + curYear;
     document.getElementById('backupAlert').innerText = "Backup: " + (localStorage.getItem('lastBackupDate') || "Mai");
 
+    // Filtro per grafico (ultimi 30 giorni)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     let kwhY=0, spesaTot=0, rispTot=0, totCasa=0, totCol=0, manutTot=0, minTot=0, minCasa=0, minCol=0, kwhCasa=0, kwhCol=0;
     let chartLab=[], chartS=[], chartR=[];
 
     [...h].reverse().forEach(r => {
         if(r.tipo === 'RICARICA') {
-            spesaTot += (r.spesa||0); rispTot += (r.risp||0);
-            chartLab.push(r.data); chartS.push(r.spesa.toFixed(2)); chartR.push(r.risp.toFixed(2));
+            spesaTot += (r.spesa||0); 
+            rispTot += (r.risp||0);
+            
+            // FILTRO GRAFICO CORRETTO
+            let recordDate;
+            try { recordDate = new Date(r.isoDate); } catch(e){ recordDate = new Date(); }
+            
+            if (recordDate >= thirtyDaysAgo) {
+                chartLab.push(r.data.substring(0, 5)); 
+                chartS.push(r.spesa.toFixed(2));
+                chartR.push(r.risp.toFixed(2));
+            }
             
             let y = r.isoDate ? new Date(r.isoDate).getFullYear() : parseInt(r.data.split('/')[2]);
             let isCurYear = (y === curYear);
@@ -574,6 +613,7 @@ function render() {
     document.getElementById('totSpesa').innerText = "€ " + grandTotal.toFixed(2);
     document.getElementById('totSpesaCasa').innerText = totCasa.toFixed(2);
     document.getElementById('totSpesaCol').innerText = totCol.toFixed(2);
+    document.getElementById('totSpesaMan').innerText = manutTot.toFixed(2);
 
     document.getElementById('totTempo').innerText = fmtMinuti(minTot);
     document.getElementById('tempoCasa').innerText = fmtMinuti(minCasa);
@@ -603,8 +643,23 @@ function updateChart(l, s, r) {
     if(myChart) myChart.destroy();
     myChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels: l, datasets: [{ label:'Spesa', data:s, backgroundColor:'#c62828' }, { label:'Risp.', data:r, backgroundColor:'#2e7d32' }] },
-        options: { maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:false}} }
+        data: { 
+            labels: l, 
+            datasets: [
+                { label: 'Spesa (€)', data: s, backgroundColor: '#c62828', borderRadius: 3 }, 
+                { label: 'Risp. (€)', data: r, backgroundColor: '#2e7d32', borderRadius: 3 }
+            ] 
+        },
+        options: { 
+            maintainAspectRatio: false, 
+            plugins: {
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                x: { stacked: false }, // Barre affiancate per confronto diretto
+                y: { beginAtZero: true }
+            }
+        }
     });
 }
 
@@ -643,6 +698,7 @@ function esportaExcel() {
     render();
 }
 
+// FUNZIONE IMPORTAZIONE CORRETTA
 function importaCSV(event) {
     const file = event.target.files[0];
     if(!file) return;
@@ -655,39 +711,56 @@ function importaCSV(event) {
             let row = rows[i].trim();
             if(!row) continue;
             let c = row.split(';');
-            if(c.length < 13) continue; 
-            let tipo = c[1];
-            let rec = {
-                isoDate: c[13] || new Date().toISOString(),
-                data: c[0], tipo: tipo,
-                km: parseLocalNum(c[3]),
-                batt: c[4],
-                spesa: parseLocalNum(c[8]),
-                risp: parseLocalNum(c[9])
             
+            // MAPPA CORRETTA BASATA SUL TUO CSV/EXPORT
+            // 0:IsoDate 1:Tipo 2:Km 3:Batt 4:Spesa 5:Risp 6:Luogo 7:Kwh ...
+            
+            if(c.length < 5) continue; 
+            let tipo = c[1];
+            
+            let rec = {
+                isoDate: c[0] || new Date().toISOString(), // COLONNA 0, NON 13!
+                data: new Date(c[0]).toLocaleDateString('it-IT'), // Genera la data italiana
+                tipo: tipo,
+                km: parseLocalNum(c[2]),
+                batt: c[3],
+                spesa: parseLocalNum(c[4]),
+                risp: parseLocalNum(c[5])
             };
+
             if(tipo === 'RICARICA') {
-                rec.luogo = c[2];
-                rec.t_start = c[5]; rec.t_end = c[6]; rec.tempo = c[7];
-                rec.kwh = parseLocalNum(c[10]);
-                rec.prezzoLuce = parseLocalNum(c[11]);
-                rec.prezzoDiesel = parseLocalNum(c[12]);
-                if(c[4] && c[4].includes('→')) {
-                    let p = c[4].replace(/%/g,'').split(/→|->/);
+                rec.luogo = c[6];
+                rec.kwh = parseLocalNum(c[7]);
+                rec.prezzoLuce = parseLocalNum(c[8]);
+                rec.prezzoDiesel = parseLocalNum(c[9]);
+                rec.pKw = c[10];
+                rec.t_start = c[11]; rec.t_end = c[12]; 
+                rec.tempo = fmtMinuti(calcDiffMin(c[11], c[12]));
+                
+                // Gestione percentuali c_att c_tar se presenti (Colonne 13 e 14)
+                if(c[13]) rec.c_att = parseFloat(c[13]);
+                if(c[14]) rec.c_tar = parseFloat(c[14]);
+                // Fallback se colonne vuote ma batt ha la freccia
+                if((!rec.c_att || !rec.c_tar) && c[3] && c[3].includes('→')) {
+                    let p = c[3].replace(/%/g,'').split(/→|->/);
                     rec.c_att = parseFloat(p[0]); rec.c_tar = parseFloat(p[1]);
                 }
+
             } else if (tipo === 'MANUTENZIONE') {
-                rec.man_tipo = c[2];
+                rec.man_tipo = c[6]; // Colonna Luogo_ManTipo
+                rec.note = c[17];
             } else if (tipo === 'CHECK') {
-                rec.chk_raw = parseLocalNum(c[4].replace('%',''));
-                rec.mode = 'NORMAL';
+                rec.chk_raw = parseLocalNum(c[15]); // Colonna 15
+                rec.mode = c[16] || 'NORMAL';
             }
             imported.push(rec);
         }
+        
         if(imported.length > 0 && confirm(`Importare ${imported.length} record?`)) {
              imported.sort((a,b) => (b.km - a.km) || (new Date(b.isoDate) - new Date(a.isoDate)));
              localStorage.setItem(DB_NAME, JSON.stringify(imported));
-             alert("Fatto!"); location.reload();
+             alert("Importazione completata con successo!"); 
+             location.reload();
         }
     };
     reader.readAsText(file);
