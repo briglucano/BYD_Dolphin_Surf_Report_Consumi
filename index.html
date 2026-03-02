@@ -145,7 +145,7 @@
              <div style="grid-column: span 2;">
                 <label>⏰ Orario Prelievo Auto</label>
                 <input type="time" id="s_orario_fine" oninput="calcolaStima()">
-             </div>
+            </div>
         </div>
         <div class="res-box">
             <div class="res-item"><span>Energia:</span> <b id="resKwhStima">0 kWh</b></div>
@@ -169,8 +169,8 @@
         <div class="grid"><div style="grid-column: span 2;"><label>Km Totali</label><input type="number" id="kmOdo"></div></div>
         <div class="grid"><div><label>% Inizio</label><input type="number" id="c_att"></div><div><label>% Fine</label><input type="number" id="c_tar"></div></div>
         <div class="grid">
-            <div><label>🟢 Ora Inizio</label><input type="time" id="t_start"></div>
-            <div><label>🔴 Ora Fine</label><input type="time" id="t_end"></div>
+            <div><label>🟢 Ora Inizio (Opz.)</label><input type="time" id="t_start"></div>
+            <div><label>🔴 Ora Fine (Opz.)</label><input type="time" id="t_end"></div>
         </div>
         <div class="power-box">
             <label>⚡ Potenza (kW)</label>
@@ -301,21 +301,17 @@ let showAllHistory = false;
 
 window.onload = function() {
     loadConfig();
-    
-    // Recupera la preferenza sulla dispersione (se precedentemente salvata)
     const savedDisp = localStorage.getItem('ev_dispersion_v2');
     if(savedDisp !== null) document.getElementById('dispersionVal').value = savedDisp;
-
     const today = new Date().toISOString().split('T')[0];
     ['data_inserimento', 'chk_data', 'man_data'].forEach(id => document.getElementById(id).value = today);
     const pref = JSON.parse(localStorage.getItem('ev_pref_v5_5'));
     if(pref) {
-        document.getElementById('pLuce').value = pref.pL || ''; document.getElementById('pDiesel').value = pref.pD || '';
+        document.getElementById('pLuce').value = pref.pL || '';
+        document.getElementById('pDiesel').value = pref.pD || '';
         document.getElementById('pKw_stima').value = pref.pKw || 2.3; document.getElementById('pKw_carica').value = pref.pKw || 2.3;
     }
     render();
-    
-    // Timer popup (30 secondi)
     setTimeout(openKofiPopup, 30000);
 };
 
@@ -374,11 +370,9 @@ function calcolaStima() {
     
     if (tar > att) {
         const kwh = appConfig.cap * (tar - att) / 100;
-        const oreDec = (kwh / kw); 
-        
+        const oreDec = (kwh / kw);
         document.getElementById('resKwhStima').innerText = kwh.toFixed(1) + " kWh";
         document.getElementById('resTempo').innerText = Math.floor(oreDec) + "h " + Math.round((oreDec % 1)*60) + "m";
-        
         const orarioFine = document.getElementById('s_orario_fine').value;
         if (orarioFine) {
             const [h, m] = orarioFine.split(':').map(Number);
@@ -389,7 +383,7 @@ function calcolaStima() {
             document.getElementById('resOrarioAvvio').innerText = String(startDate.getHours()).padStart(2,'0') + ":" + String(startDate.getMinutes()).padStart(2,'0');
         }
     } else {
-        document.getElementById('resKwhStima').innerText = "0 kWh"; 
+        document.getElementById('resKwhStima').innerText = "0 kWh";
         document.getElementById('resTempo').innerText = "-"; 
         document.getElementById('resOrarioAvvio').innerText = "--:--";
     }
@@ -404,36 +398,22 @@ function calcDiffMin(start, end) {
     return diff < 0 ? diff + 1440 : diff;
 }
 
-// -------------------------------------------------------------
-// FUNZIONE CHE AGGIORNA TUTTO LO STORICO CON LA NUOVA DISPERSIONE
-// -------------------------------------------------------------
 function updateDispersion() {
     const disp = parseFloat(document.getElementById('dispersionVal').value) || 15;
     localStorage.setItem('ev_dispersion_v2', disp);
-    
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     let isUpdated = false;
-    
     h.forEach(r => {
-        // Applica retroattivamente la dispersione scelta a tutte le ricariche domestiche passate!
         if (r.tipo === 'RICARICA' && r.luogo === 'DOMESTICA' && r.prezzoLuce && r.kwh) {
-            let kwhRete = r.kwh * (1 + (disp / 100)); // calcola energia reale presa dal contatore
-            r.spesa = kwhRete * r.prezzoLuce; // Nuova spesa reale
-            
-            // Ricalcola il risparmio usando la nuova spesa!
+            let kwhRete = r.kwh * (1 + (disp / 100));
+            r.spesa = kwhRete * r.prezzoLuce;
             const kmTeorici = (r.kwh / appConfig.consEv) * 100;
             const costoTermico = (kmTeorici / 100) * appConfig.consTermico * r.prezzoDiesel;
             r.risp = costoTermico - r.spesa;
-            
             isUpdated = true;
         }
     });
-    
-    if (isUpdated) {
-        localStorage.setItem(DB_NAME, JSON.stringify(h));
-        render(); // Aggiorna grafici e totale istantaneamente
-        calcolaBolletta(); // Aggiorna la tabella bolletta
-    }
+    if (isUpdated) { localStorage.setItem(DB_NAME, JSON.stringify(h)); render(); calcolaBolletta(); }
 }
 
 function salvaRicarica() {
@@ -449,30 +429,31 @@ function salvaRicarica() {
     const luogo = document.querySelector('input[name="luogoRicarica"]:checked').value;
 
     if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti");
-
-    const kwh = appConfig.cap * (tar - att) / 100; // kWh netti immagazzinati
     
-    // --- APPLICAZIONE DISPERSIONE DIRETTAMENTE NEL SALVATAGGIO ---
+    const kwh = appConfig.cap * (tar - att) / 100;
     let kwhFatturati = kwh;
     if (luogo === 'DOMESTICA') {
         const disp = parseFloat(document.getElementById('dispersionVal').value) || 15;
-        kwhFatturati = kwh * (1 + (disp / 100)); // kWh reali prelevati dal contatore di casa
+        kwhFatturati = kwh * (1 + (disp / 100));
     } else {
-        kwhFatturati = kwh / appConfig.efficienza; // Per colonnine manteniamo efficienza standard veicolo/colonna
+        kwhFatturati = kwh / appConfig.efficienza;
     }
 
-    const spesa = kwhFatturati * pL; // Spesa già comprensiva di dispersione
+    const spesa = kwhFatturati * pL;
     const kmTeorici = (kwh / appConfig.consEv) * 100;
     const costoTermico = (kmTeorici / 100) * appConfig.consTermico * pD;
-    const risp = costoTermico - spesa; // Risparmio "reale"
+    const risp = costoTermico - spesa;
 
-    const record = {
-        tipo: 'RICARICA', luogo, isoDate: dataIn.toISOString(),
-        data: dataIn.toLocaleDateString('it-IT'), km,
-        batt: `${att}%→${tar}%`, c_att: att, c_tar: tar,
-        t_start: tStart, t_end: tEnd, tempo: fmtMinuti(calcDiffMin(tStart, tEnd)),
-        prezzoLuce: pL, prezzoDiesel: pD, pKw, spesa, risp, kwh
+    // Se mancano gli orari, tStart e tEnd saranno stringhe vuote. calcDiffMin restituirà 0.
+    const diffMin = calcDiffMin(tStart, tEnd);
+    const record = { 
+        tipo: 'RICARICA', luogo, isoDate: dataIn.toISOString(), 
+        data: dataIn.toLocaleDateString('it-IT'), km, batt: `${att}%→${tar}%`, 
+        c_att: att, c_tar: tar, t_start: tStart, t_end: tEnd, 
+        tempo: diffMin > 0 ? fmtMinuti(diffMin) : '-', 
+        prezzoLuce: pL, prezzoDiesel: pD, pKw, spesa, risp, kwh 
     };
+
     saveToDb(record, 'editIndex');
     localStorage.setItem('ev_pref_v5_5', JSON.stringify({pL, pD, pKw}));
     annullaModifica();
@@ -484,10 +465,7 @@ function salvaCheck() {
     const perc = document.getElementById('chk_perc').value;
     const mode = document.getElementById('chk_mode').value;
     if (isNaN(km)) return alert("Inserisci i Km");
-    const record = { 
-        tipo: 'CHECK', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'),
-        km, batt: perc+"%", chk_raw: perc, mode, spesa:0, risp:0, kwh:0
-    };
+    const record = { tipo: 'CHECK', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'), km, batt: perc+"%", chk_raw: perc, mode, spesa:0, risp:0, kwh:0 };
     saveToDb(record, 'editCheckIndex');
     annullaModificaCheck();
 }
@@ -499,10 +477,7 @@ function salvaManutenzione() {
     const km = parseFloat(document.getElementById('man_km').value);
     const note = document.getElementById('man_note').value;
     if(isNaN(costo)) return alert("Inserisci il costo");
-    const record = {
-        tipo: 'MANUTENZIONE', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'),
-        km: km || 0, man_tipo: tipo, spesa: costo, risp: 0, kwh: 0, note: note
-    };
+    const record = { tipo: 'MANUTENZIONE', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'), km: km || 0, man_tipo: tipo, spesa: costo, risp: 0, kwh: 0, note: note };
     saveToDb(record, 'editMaintIndex');
     annullaModificaMaint();
 }
@@ -522,180 +497,146 @@ function saveToDb(record, indexFieldId) {
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
+    tb.innerHTML = '';
     const curYear = new Date().getFullYear();
     document.getElementById('labelAnnoKwh').innerText = "kWh " + curYear;
     document.getElementById('backupAlert').innerText = "Backup: " + (localStorage.getItem('lastBackupDate') || "Mai");
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    let tKm=0, tKwh=0, tKwhC=0, tKwhO=0, tS=0, tSC=0, tSO=0, tSM=0, tR=0, tMinC=0, tMinO=0, tKwhAnno=0;
+    let kmDiffs = [];
 
-    let kwhY=0, spesaTot=0, rispTot=0, totCasa=0, totCol=0, manutTot=0, minTot=0, minCasa=0, minCol=0, kwhCasa=0, kwhCol=0;
-    let chartLab=[], chartS=[], chartR=[];
-
-    [...h].reverse().forEach(r => {
-        if(r.tipo === 'RICARICA') {
-            spesaTot += (r.spesa||0); 
-            rispTot += (r.risp||0);
-            
-            let recordDate;
-            try { recordDate = new Date(r.isoDate); } catch(e){ recordDate = new Date(); }
-            
-            if (recordDate >= thirtyDaysAgo) {
-                chartLab.push(r.data.substring(0, 5)); 
-                chartS.push(r.spesa.toFixed(2));
-                chartR.push(r.risp.toFixed(2));
-            }
-            
-            let y = r.isoDate ? new Date(r.isoDate).getFullYear() : parseInt(r.data.split('/')[2]);
-            let isCurYear = (y === curYear);
-            if(isCurYear) kwhY += (r.kwh||0);
-
-            let mins = calcDiffMin(r.t_start, r.t_end);
-            minTot += mins;
-            if(r.luogo === 'COLONNINA') { totCol += r.spesa; minCol += mins; if(isCurYear) kwhCol += r.kwh; } 
-            else { totCasa += r.spesa; minCasa += mins; if(isCurYear) kwhCasa += r.kwh; }
-        } else if(r.tipo === 'MANUTENZIONE') {
-            manutTot += (r.spesa||0);
-        }
+    h.forEach((r, i) => {
+        if(r.tipo==='RICARICA'){
+            tKwh += (r.kwh||0); tS += (r.spesa||0); tR += (r.risp||0);
+            if(r.luogo==='DOMESTICA'){ tKwhC+=(r.kwh||0); tSC+=(r.spesa||0); tMinC+=calcDiffMin(r.t_start, r.t_end); }
+            else { tKwhO+=(r.kwh||0); tSO+=(r.spesa||0); tMinO+=calcDiffMin(r.t_start, r.t_end); }
+            if(new Date(r.isoDate).getFullYear() === curYear) tKwhAnno += (r.kwh||0);
+        } else if(r.tipo==='MANUTENZIONE'){ tSM += (r.spesa||0); }
+        if(i===0) tKm = r.km;
     });
 
-    updateChart(chartLab, chartS, chartR);
-
-    const limit = showAllHistory ? h.length : 10;
-    const btnMore = document.getElementById('btnShowMore');
-    btnMore.innerText = showAllHistory ? "⬆️ Riduci" : `⬇️ Mostra tutto (${h.length})`;
-    btnMore.style.display = h.length > 10 ? 'block' : 'none';
-
-    tb.innerHTML = h.slice(0, limit).map((r, i) => {
-        const idx = h.indexOf(r);
-        let diffKm = 0;
-        for(let k=idx+1; k<h.length; k++){ if(h[k].km > 0) { diffKm = r.km - h[k].km; break; } }
-
-        let badge = "", info = "", money = "";
-        if(r.tipo === 'RICARICA') {
-            let color = r.luogo === 'COLONNINA' ? '#e65100' : '#2e7d32';
-            badge = `<span style="background:${color}; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">${r.luogo === 'COLONNINA' ? 'COL' : 'HOME'}</span>`;
-            info = r.batt;
-            money = `<span style="color:var(--expense)">€${r.spesa.toFixed(2)}</span>`;
-        } else if (r.tipo === 'CHECK') {
-             const checkColors = { 'ECO': '#ce93d8', 'MISTO': '#ab47bc', 'NORMAL': '#8e24aa', 'SPORT': '#4a148c' };
-             badge = `<span style="background:${checkColors[r.mode]||'#6a1b9a'}; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">CHECK ${r.mode||''}</span>`;
-             info = `${r.batt}`;
-             money = "-";
-        } else {
-             badge = `<span style="background:var(--maint); color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">FIX</span>`;
-             info = `${r.man_tipo}${r.note ? '<br><small><i>'+r.note+'</i></small>' : ''}`;
-             money = `<span style="color:var(--maint)">€${r.spesa.toFixed(2)}</span>`;
+    const displayH = showAllHistory ? h : h.slice(0, 10);
+    displayH.forEach((r, i) => {
+        let diff = '-';
+        if (i < h.length - 1) {
+            const prev = h[i+1];
+            if (r.km && prev.km) diff = (r.km - prev.km).toFixed(0);
         }
+        const row = tb.insertRow();
+        row.style.borderLeft = r.tipo==='RICARICA'?(r.luogo==='DOMESTICA'?'5px solid var(--primary)':'5px solid var(--accent)'):r.tipo==='CHECK'?'5px solid var(--check)':'5px solid var(--maint)';
+        
+        let orariStr = r.tipo==='RICARICA' ? (r.t_start && r.t_end ? `${r.t_start}-${r.t_end}` : '-') : '-';
 
-        let rispStr = (r.tipo === 'RICARICA' && r.risp !== 0) ? `€${r.risp.toFixed(2)}` : '-';
-
-        return `<tr>
-            <td style="font-size:0.75em">${r.data}</td>
-            <td>${badge}</td>
-            <td><b>${r.km || ''}</b></td>
-            <td style="color:var(--accent); font-size:0.8em">${diffKm>0?'+'+diffKm:''}</td>
-            <td style="font-size:0.8em">${info}</td>
-            <td style="font-size:0.7em; color:#555">${r.t_start||''}<br>${r.t_end||''}</td>
-            <td>${money}</td>
-            <td style="font-weight:bold; font-size:0.8em; color:${r.risp>=0?'var(--save)':'var(--expense)'}">${rispStr}</td>
+        row.innerHTML = `
+            <td>${r.data.split('/')[0]}/${r.data.split('/')[1]}</td>
+            <td style="font-size:0.7em;font-weight:bold">${r.tipo==='RICARICA'?(r.luogo==='DOMESTICA'?'🏠':'⛽'):r.tipo==='CHECK'?'📝':'🛠️'}</td>
+            <td>${r.km||0}</td>
+            <td style="color:#777;font-weight:bold">${diff}</td>
+            <td>${r.batt||'-'}</td>
+            <td style="font-size:0.85em;color:var(--time);font-weight:bold">${orariStr}</td>
+            <td style="color:var(--expense);font-weight:bold">${r.spesa? '€'+r.spesa.toFixed(2):'-'}</td>
+            <td style="color:var(--save);font-weight:bold">${r.risp? '€'+r.risp.toFixed(2):'-'}</td>
             <td>
-                <button style="border:none;background:none;cursor:pointer" onclick="preparaModifica(${idx})">✏️</button>
-                <button style="border:none;background:none;color:red;cursor:pointer" onclick="elimina(${idx})">🗑️</button>
+                <button onclick="modifica(${i})" style="border:none;background:var(--edit);color:white;padding:4px 8px;border-radius:5px;cursor:pointer">✏️</button>
+                <button onclick="elimina(${i})" style="border:none;background:#ff5252;color:white;padding:4px 8px;border-radius:5px;cursor:pointer">🗑️</button>
             </td>
-        </tr>`;
-    }).join('');
-
-    let grandTotal = spesaTot + manutTot;
-
-    document.getElementById('totSpesa').innerText = "€ " + grandTotal.toFixed(2);
-    document.getElementById('totSpesaCasa').innerText = totCasa.toFixed(2);
-    document.getElementById('totSpesaCol').innerText = totCol.toFixed(2);
-    document.getElementById('totSpesaMan').innerText = manutTot.toFixed(2);
-
-    document.getElementById('totTempo').innerText = fmtMinuti(minTot);
-    document.getElementById('tempoCasa').innerText = fmtMinuti(minCasa);
-    document.getElementById('tempoCol').innerText = fmtMinuti(minCol);
-
-    document.getElementById('totRisp').innerText = "€ " + rispTot.toFixed(2);
-    
-    document.getElementById('totKwhAnno').innerText = kwhY.toFixed(1);
-    document.getElementById('totKwhCasa').innerText = kwhCasa.toFixed(1);
-    document.getElementById('totKwhCol').innerText = kwhCol.toFixed(1);
-    
-    document.getElementById('totKmReali').innerText = h[0]?.km || 0;
-    
-    let avg = "---";
-    const ricariche = h.filter(r => r.tipo === 'RICARICA');
-    if (ricariche.length >= 2) {
-        const dist = ricariche[0].km - ricariche[ricariche.length - 1].km;
-        let energy = 0;
-        for (let i = 0; i < ricariche.length - 1; i++) energy += (ricariche[i].kwh||0);
-        if (dist > 0) avg = ((energy / dist) * 100).toFixed(1);
-    }
-    document.getElementById('avgConsumo').innerText = avg;
-}
-
-function updateChart(l, s, r) {
-    const ctx = document.getElementById('savingsChart').getContext('2d');
-    if(myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
-        type: 'bar',
-        data: { 
-            labels: l, 
-            datasets: [
-                { label: 'Spesa (€)', data: s, backgroundColor: '#c62828', borderRadius: 3 }, 
-                { label: 'Risp. (€)', data: r, backgroundColor: '#2e7d32', borderRadius: 3 }
-            ] 
-        },
-        options: { 
-            maintainAspectRatio: false, 
-            plugins: { tooltip: { mode: 'index', intersect: false } },
-            scales: { x: { stacked: false }, y: { beginAtZero: true } }
-        }
+        `;
     });
+
+    document.getElementById('btnShowMore').style.display = h.length > 10 ? 'block' : 'none';
+    document.getElementById('btnShowMore').innerText = showAllHistory ? '⬆️ Mostra meno' : '⬇️ Mostra tutto (' + h.length + ')';
+    
+    document.getElementById('totKmReali').innerText = Math.round(tKm).toLocaleString();
+    document.getElementById('totKwhAnno').innerText = tKwhAnno.toFixed(1);
+    document.getElementById('totKwhCasa').innerText = Math.round(tKwhC);
+    document.getElementById('totKwhCol').innerText = Math.round(tKwhO);
+    document.getElementById('totSpesa').innerText = '€ ' + (tS + tSM).toFixed(2);
+    document.getElementById('totSpesaCasa').innerText = Math.round(tSC);
+    document.getElementById('totSpesaCol').innerText = Math.round(tSO);
+    document.getElementById('totSpesaMan').innerText = Math.round(tSM);
+    document.getElementById('totRisp').innerText = '€ ' + tR.toFixed(2);
+    document.getElementById('totTempo').innerText = Math.floor((tMinC+tMinO)/60) + 'h ' + ((tMinC+tMinO)%60) + 'm';
+    document.getElementById('tempoCasa').innerText = Math.floor(tMinC/60) + 'h';
+    document.getElementById('tempoCol').innerText = Math.floor(tMinO/60) + 'h';
+    
+    const validKm = h.filter(x => x.km > 0);
+    if(validKm.length > 1){
+        const totalKm = validKm[0].km - validKm[validKm.length-1].km;
+        document.getElementById('avgConsumo').innerText = totalKm > 0 ? (tKwh / totalKm * 100).toFixed(1) : '---';
+    }
+    updateChart(h);
 }
+
+function updateChart(h) {
+    const ctx = document.getElementById('savingsChart').getContext('2d');
+    const last15 = h.filter(x => x.tipo==='RICARICA').slice(0, 15).reverse();
+    const data = {
+        labels: last15.map(x => x.data.split('/')[0]+'/'+x.data.split('/')[1]),
+        datasets: [
+            { label: 'Spesa (€)', data: last15.map(x => x.spesa), backgroundColor: '#c62828', borderRadius: 5 },
+            { label: 'Risparmio (€)', data: last15.map(x => x.risp), backgroundColor: '#2e7d32', borderRadius: 5 }
+        ]
+    };
+    if (myChart) myChart.destroy();
+    myChart = new Chart(ctx, { type: 'bar', data: data, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } } });
+}
+
+function toggleShowAll() { showAllHistory = !showAllHistory; render(); }
+
+function modifica(i) {
+    const h = JSON.parse(localStorage.getItem(DB_NAME));
+    const r = h[i];
+    if (r.tipo === 'RICARICA') {
+        openTab('carica'); document.getElementById('editIndex').value = i; document.getElementById('data_inserimento').value = r.isoDate.split('T')[0]; document.getElementById('kmOdo').value = r.km; document.getElementById('c_att').value = r.c_att; document.getElementById('c_tar').value = r.c_tar; document.getElementById('t_start').value = r.t_start; document.getElementById('t_end').value = r.t_end; document.getElementById('pKw_carica').value = r.pKw; document.getElementById('pLuce').value = r.prezzoLuce; document.getElementById('pDiesel').value = r.prezzoDiesel; document.querySelector(`input[name="luogoRicarica"][value="${r.luogo}"]`).checked = true; toggleEdit('btnSalva','btnAnnulla',true);
+    } else if (r.tipo === 'MANUTENZIONE') {
+        openTab('manutenzione'); document.getElementById('editMaintIndex').value = i; document.getElementById('man_data').value = r.isoDate.split('T')[0]; document.getElementById('man_tipo').value = r.man_tipo; document.getElementById('man_costo').value = r.spesa; document.getElementById('man_km').value = r.km; document.getElementById('man_note').value = r.note||''; toggleEdit('btnSalvaMaint','btnAnnullaMaint',true);
+    } else {
+        openTab('check'); document.getElementById('editCheckIndex').value = i; document.getElementById('chk_data').value = r.isoDate.split('T')[0]; document.getElementById('chk_km').value = r.km; document.getElementById('chk_perc').value = r.chk_raw; toggleEdit('btnSalvaCheck','btnAnnullaCheck',true);
+    }
+}
+
+function toggleEdit(s,c,on){ document.getElementById(s).innerText=on?"🔄 Aggiorna":"💾 Salva"; document.getElementById(c).style.display=on?'block':'none'; document.getElementById(s).classList.toggle('editing',on); }
+function annullaModifica(){ document.getElementById('editIndex').value=-1; toggleEdit('btnSalva','btnAnnulla',false); }
+function annullaModificaCheck(){ document.getElementById('editCheckIndex').value=-1; toggleEdit('btnSalvaCheck','btnAnnullaCheck',false); }
+function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value=''; }
+
+function elimina(i){ if(confirm("Eliminare?")){ let h=JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME,JSON.stringify(h)); render(); calcolaBolletta(); } }
 
 function calcolaBolletta() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    const tbody = document.getElementById('billBody'); tbody.innerHTML = "";
-    let monthly = {};
-    
-    h.forEach(r => {
-        if(r.tipo === 'RICARICA' && r.luogo === 'DOMESTICA') {
-            let k = r.isoDate.substring(0, 7); 
-            if(!monthly[k]) monthly[k] = { kwh:0, spesa:0, kwhRete:0 };
-            
-            // Dato che la r.spesa include già la dispersione calcoliamo a ritroso i Kwh Rete usati per quella spesa
-            let calcKwhRete = r.spesa / r.prezzoLuce; 
-            if (!isFinite(calcKwhRete)) calcKwhRete = r.kwh;
-
-            monthly[k].kwh += r.kwh; 
-            monthly[k].kwhRete += calcKwhRete;
-            monthly[k].spesa += r.spesa;
-        }
+    const disp = parseFloat(document.getElementById('dispersionVal').value) || 15;
+    const stats = {};
+    h.filter(x => x.tipo==='RICARICA' && x.luogo==='DOMESTICA').forEach(r => {
+        const d = new Date(r.isoDate);
+        const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if(!stats[key]) stats[key] = { kwh: 0, spesa: 0 };
+        stats[key].kwh += r.kwh;
+        stats[key].spesa += r.spesa;
     });
-    
-    Object.keys(monthly).sort().reverse().forEach(k => {
-        let m = monthly[k]; 
-        let [y, mo] = k.split('-');
-        let name = new Date(y, mo-1).toLocaleString('it-IT', { month:'long', year:'numeric' });
-        tbody.innerHTML += `<tr><td style="text-transform:capitalize">${name}</td><td>${m.kwh.toFixed(1)}</td><td style="color:#ef6c00">${m.kwhRete.toFixed(1)}</td><td style="color:#2e7d32; font-weight:bold;">€${m.spesa.toFixed(2)}</td></tr>`;
+    const body = document.getElementById('billBody');
+    body.innerHTML = '';
+    Object.keys(stats).sort().reverse().forEach(k => {
+        const row = body.insertRow();
+        const kwhRete = stats[k].kwh * (1 + (disp/100));
+        row.innerHTML = `<td>${k}</td><td>${stats[k].kwh.toFixed(1)}</td><td>${kwhRete.toFixed(1)}</td><td style="font-weight:bold;color:var(--expense)">€ ${stats[k].spesa.toFixed(2)}</td>`;
     });
 }
 
 function esportaExcel() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    let csv = "IsoDate;Tipo;Km;Batt;Spesa;Risp;Luogo_ManTipo;Kwh;PrezzoLuce;PrezzoDiesel;PKw;T_Start;T_End;C_Att;C_Tar;Chk_Raw;Mode;Note\n";
+    if(h.length===0) return alert("Nessun dato");
+    let csv = "Data;Tipo;Km;Info;Orari;Spesa;Risparmio;Kwh;Note\n";
     h.forEach(r => {
-        const s = v => (v === undefined || v === null) ? '' : v;
-        csv += `${s(r.isoDate)};${s(r.tipo)};${s(r.km)};${s(r.batt)};${s(r.spesa)};${s(r.risp)};${s(r.luogo||r.man_tipo)};${s(r.kwh)};${s(r.prezzoLuce)};${s(r.prezzoDiesel)};${s(r.pKw)};${s(r.t_start)};${s(r.t_end)};${s(r.c_att)};${s(r.c_tar)};${s(r.chk_raw)};${s(r.mode)};${s(r.note)}\n`;
+        csv += `${r.data};${r.tipo}${r.luogo?' - '+r.luogo:''};${r.km||0};${r.batt||''};${(r.t_start||'')}-${(r.t_end||'')};${r.spesa.toFixed(2).replace('.',',')};${r.risp.toFixed(2).replace('.',',')};${r.kwh.toFixed(2).replace('.',',')};${(r.note||'').replace(/;/g,',')}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
-    a.download = "ev_backup_final.csv"; a.click();
-    localStorage.setItem('lastBackupDate', new Date().toLocaleDateString());
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", "EV_Monitor_Backup_" + new Date().toISOString().split('T')[0] + ".csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    localStorage.setItem('lastBackupDate', new Date().toLocaleString());
     render();
 }
 
@@ -704,82 +645,33 @@ function importaCSV(event) {
     if(!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-        const rows = e.target.result.split('\n');
-        if(rows.length < 2) return alert("File vuoto");
-        let imported = [];
-        for(let i=1; i<rows.length; i++) {
-            let row = rows[i].trim();
-            if(!row) continue;
-            let c = row.split(';');
-            
-            if(c.length < 5) continue; 
-            let tipo = c[1];
-            
-            let rec = {
-                isoDate: c[0] || new Date().toISOString(),
-                data: new Date(c[0]).toLocaleDateString('it-IT'),
-                tipo: tipo,
-                km: parseLocalNum(c[2]),
-                batt: c[3],
-                spesa: parseLocalNum(c[4]),
-                risp: parseLocalNum(c[5])
-            };
-
-            if(tipo === 'RICARICA') {
-                rec.luogo = c[6];
-                rec.kwh = parseLocalNum(c[7]);
-                rec.prezzoLuce = parseLocalNum(c[8]);
-                rec.prezzoDiesel = parseLocalNum(c[9]);
-                rec.pKw = c[10];
-                rec.t_start = c[11]; rec.t_end = c[12]; 
-                rec.tempo = fmtMinuti(calcDiffMin(c[11], c[12]));
-                
-                if(c[13]) rec.c_att = parseFloat(c[13]);
-                if(c[14]) rec.c_tar = parseFloat(c[14]);
-                if((!rec.c_att || !rec.c_tar) && c[3] && c[3].includes('→')) {
-                    let p = c[3].replace(/%/g,'').split(/→|->/);
-                    rec.c_att = parseFloat(p[0]); rec.c_tar = parseFloat(p[1]);
-                }
-
-            } else if (tipo === 'MANUTENZIONE') {
-                rec.man_tipo = c[6];
-                rec.note = c[17];
-            } else if (tipo === 'CHECK') {
-                rec.chk_raw = parseLocalNum(c[15]);
-                rec.mode = c[16] || 'NORMAL';
-            }
-            imported.push(rec);
+        const lines = e.target.result.split('\n');
+        const newDb = [];
+        for(let i=1; i<lines.length; i++){
+            if(!lines[i].trim()) continue;
+            const cols = lines[i].split(';');
+            const tipoFull = cols[1].split(' - ');
+            const [gg, mm, aaaa] = cols[0].split('/');
+            const isoDate = new Date(aaaa, mm-1, gg).toISOString();
+            const [ts, te] = cols[4].split('-');
+            newDb.push({
+                data: cols[0], isoDate,
+                tipo: tipoFull[0], luogo: tipoFull[1]||'',
+                km: parseFloat(cols[2])||0, batt: cols[3],
+                t_start: ts||'', t_end: te||'',
+                spesa: parseLocalNum(cols[5]), risp: parseLocalNum(cols[6]),
+                kwh: parseLocalNum(cols[7]), note: cols[8]||''
+            });
         }
-        
-        if(imported.length > 0 && confirm(`Importare ${imported.length} record?`)) {
-             imported.sort((a,b) => (b.km - a.km) || (new Date(b.isoDate) - new Date(a.isoDate)));
-             localStorage.setItem(DB_NAME, JSON.stringify(imported));
-             alert("Importazione completata con successo!"); 
-             location.reload();
+        if(confirm("Importare " + newDb.length + " record? Questo sovrascriverà i dati attuali.")){
+            localStorage.setItem(DB_NAME, JSON.stringify(newDb));
+            render();
         }
     };
     reader.readAsText(file);
 }
 
-function preparaModifica(i) {
-    let h = JSON.parse(localStorage.getItem(DB_NAME)), r = h[i];
-    if(r.tipo==='RICARICA'){
-        openTab('carica'); document.getElementById('editIndex').value=i; document.getElementById('data_inserimento').value=r.isoDate.split('T')[0]; document.getElementById('kmOdo').value=r.km; document.getElementById('pLuce').value=r.prezzoLuce; document.getElementById('c_att').value=r.c_att; document.getElementById('c_tar').value=r.c_tar; toggleEdit('btnSalva','btnAnnulla',true);
-        document.getElementById('pKw_carica').value = r.pKw || '';
-    } else if(r.tipo==='MANUTENZIONE'){
-        openTab('manutenzione'); document.getElementById('editMaintIndex').value=i; document.getElementById('man_data').value=r.isoDate.split('T')[0]; document.getElementById('man_costo').value=r.spesa; document.getElementById('man_km').value=r.km; document.getElementById('man_note').value=r.note||''; toggleEdit('btnSalvaMaint','btnAnnullaMaint',true);
-    } else {
-        openTab('check'); document.getElementById('editCheckIndex').value=i; document.getElementById('chk_data').value=r.isoDate.split('T')[0]; document.getElementById('chk_km').value=r.km; document.getElementById('chk_perc').value=r.chk_raw; toggleEdit('btnSalvaCheck','btnAnnullaCheck',true);
-    }
-}
-function toggleEdit(s,c,on){ document.getElementById(s).innerText=on?"🔄 Aggiorna":"💾 Salva"; document.getElementById(c).style.display=on?'block':'none'; document.getElementById(s).classList.toggle('editing',on); }
-function annullaModifica(){ document.getElementById('editIndex').value=-1; toggleEdit('btnSalva','btnAnnulla',false); }
-function annullaModificaCheck(){ document.getElementById('editCheckIndex').value=-1; toggleEdit('btnSalvaCheck','btnAnnullaCheck',false); }
-function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value='';
-}
-function elimina(i){ if(confirm("Eliminare?")){ let h=JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME,JSON.stringify(h)); render(); calcolaBolletta(); }}
-function pulisci(){ if(confirm("Cancellare TUTTO?")){ localStorage.removeItem(DB_NAME); location.reload(); }}
-function toggleShowAll(){ showAllHistory=!showAllHistory; render(); }
+function pulisci() { if(confirm("CANCELLARE TUTTO IL DATABASE?")) { localStorage.removeItem(DB_NAME); render(); } }
 </script>
 </body>
 </html>
