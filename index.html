@@ -169,8 +169,8 @@
         <div class="grid"><div style="grid-column: span 2;"><label>Km Totali</label><input type="number" id="kmOdo"></div></div>
         <div class="grid"><div><label>% Inizio</label><input type="number" id="c_att"></div><div><label>% Fine</label><input type="number" id="c_tar"></div></div>
         <div class="grid">
-            <div><label>🟢 Ora Inizio</label><input type="time" id="t_start"></div>
-            <div><label>🔴 Ora Fine</label><input type="time" id="t_end"></div>
+            <div><label>🟢 Ora Inizio (Opz.)</label><input type="time" id="t_start"></div>
+            <div><label>🔴 Ora Fine (Opz.)</label><input type="time" id="t_end"></div>
         </div>
         <div class="power-box">
             <label>⚡ Potenza (kW)</label>
@@ -596,7 +596,7 @@ function render() {
             <td><b>${r.km || ''}</b></td>
             <td style="color:var(--accent); font-size:0.8em">${diffKm>0?'+'+diffKm:''}</td>
             <td style="font-size:0.8em">${info}</td>
-            <td style="font-size:0.7em; color:#555">${r.t_start||''}<br>${r.t_end||''}</td>
+            <td style="font-size:0.7em; color:#555">${(r.t_start && r.t_end) ? r.t_start + '<br>' + r.t_end : '-'}</td>
             <td>${money}</td>
             <td style="font-weight:bold; font-size:0.8em; color:${r.risp>=0?'var(--save)':'var(--expense)'}">${rispStr}</td>
             <td>
