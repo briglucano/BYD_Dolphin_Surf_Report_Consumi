@@ -64,6 +64,7 @@
         .actions-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
         .btn-action { padding: 10px 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.75em; color: white; display: flex; align-items: center; gap: 5px; text-decoration: none; }
+        #backupAlert { color: #c62828; font-weight: bold; font-size: 0.85em; background: #ffebee; padding: 5px 15px; border-radius: 20px; border: 1px solid #ffcdd2; }
         
         .setup-box { background: #eceff1; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #cfd8dc; }
         
@@ -72,23 +73,50 @@
         .bill-table td { padding: 8px; text-align: center; border-bottom: 1px solid #eee; }
         .dispersion-box { background: #fff8e1; border: 1px solid #ffecb3; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center; }
 
-        .btn-caffe-large { background-color: #29abe0; color: white !important; font-size: 1rem; padding: 12px 25px; border-radius: 50px; box-shadow: 0 4px 10px rgba(41, 171, 224, 0.3); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: bold; }
-        .info-btn { display: inline-block; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; text-decoration: none; font-weight: bold; font-size: 0.75em; padding: 6px 12px; border-radius: 15px; margin-bottom: 10px; }
+        .settings-row { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
+        .settings-row > * { flex: 1; margin-top: 0 !important; }
+        
+        .btn-caffe-large { background-color: #29abe0; color: white !important; font-size: 1rem; padding: 12px 25px; border-radius: 50px; box-shadow: 0 4px 10px rgba(41, 171, 224, 0.3); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: bold; transition: transform 0.2s; }
+        .btn-caffe-large:active { transform: scale(0.95); }
+
+        .info-btn { display: inline-block; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; text-decoration: none; font-weight: bold; font-size: 0.75em; padding: 6px 12px; border-radius: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.2s; }
+        .info-btn:active { transform: scale(0.95); }
+
+        .kofi-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 9999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); animation: kofiFadeIn 0.5s; }
+        .kofi-box { background: white; width: 90%; max-width: 400px; padding: 30px; border-radius: 16px; text-align: center; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.3); font-family: inherit; }
+        .kofi-close { position: absolute; top: 10px; right: 15px; font-size: 28px; color: #aaa; cursor: pointer; line-height: 1; }
+        .kofi-close:hover { color: #333; }
+        .kofi-content h3 { margin-top: 0; color: #333; margin-bottom: 10px; }
+        .kofi-content p { color: #666; font-size: 15px; line-height: 1.5; margin-bottom: 25px; }
+        .kofi-footer { font-size: 12px; color: #999; margin-top: 15px; }
+        .kofi-popup-btn { display: inline-block; background-color: #29abe0; color: white !important; text-decoration: none; font-weight: bold; padding: 12px 30px; border-radius: 50px; font-size: 16px; transition: 0.2s; box-shadow: 0 5px 15px rgba(41, 171, 224, 0.4); }
+        .kofi-popup-btn:hover { background-color: #1a9cd0; transform: translateY(-2px); }
+        @keyframes kofiFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         @media print {
+            body { background: white; padding: 0; }
             .card, .tabs, .form-section, .actions-footer, .show-more-btn { display: none !important; }
-            .history-card { box-shadow: none; border: none; width: 100%; }
+            .history-card { box-shadow: none; border: none; max-width: 100%; padding: 0; margin: 0; }
+            .table-wrapper { overflow: visible; }
+            table { width: 100%; font-size: 9pt; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 4px; }
+            .chart-container { height: 250px; page-break-inside: avoid; }
+            .stat-small { border: 1px solid #ccc; }
         }
     </style>
 </head>
 <body>
 
 <div class="card">
+    
     <h2>EV MONITOR 741 RA</h2>
+    
     <div class="model-badge" id="lblModelBadge">Ready</div>
 
     <div style="text-align: center; margin-bottom: 10px;">
-        <a href="https://ig.me/m/brigantelucano" target="_blank" class="info-btn">ℹ️ Info / Contattami</a>
+        <a href="https://ig.me/m/brigantelucano" target="_blank" class="info-btn">
+            ℹ️ Info / Contattami
+        </a>
     </div>
     
     <div class="tabs">
@@ -117,11 +145,11 @@
              <div style="grid-column: span 2;">
                 <label>⏰ Orario Prelievo Auto</label>
                 <input type="time" id="s_orario_fine" oninput="calcolaStima()">
-            </div>
+             </div>
         </div>
         <div class="res-box">
             <div class="res-item"><span>Energia:</span> <b id="resKwhStima">0 kWh</b></div>
-            <div class="res-item"><span>Tempo:</span> <b id="resTempo">-</b></div>
+            <div class="res-item"><span>Tempo (Puro):</span> <b id="resTempo">-</b></div>
             <div class="res-item res-highlight"><span>COLLEGA ALLE:</span> <b id="resOrarioAvvio" style="font-size:1.3em;">--:--</b></div>
         </div>
     </div>
@@ -140,12 +168,10 @@
         </div>
         <div class="grid"><div style="grid-column: span 2;"><label>Km Totali</label><input type="number" id="kmOdo"></div></div>
         <div class="grid"><div><label>% Inizio</label><input type="number" id="c_att"></div><div><label>% Fine</label><input type="number" id="c_tar"></div></div>
-        
         <div class="grid">
-            <div><label>🟢 Ora Inizio (Opz.)</label><input type="time" id="t_start"></div>
-            <div><label>🔴 Ora Fine (Opz.)</label><input type="time" id="t_end"></div>
+            <div><label>🟢 Ora Inizio</label><input type="time" id="t_start"></div>
+            <div><label>🔴 Ora Fine</label><input type="time" id="t_end"></div>
         </div>
-
         <div class="power-box">
             <label>⚡ Potenza (kW)</label>
             <div class="power-ctrl">
@@ -162,6 +188,15 @@
     <div id="check" class="form-section">
         <input type="hidden" id="editCheckIndex" value="-1">
         <div class="grid"><div style="grid-column: span 2;"><label>Data Controllo</label><input type="date" id="chk_data"></div></div>
+        <div class="grid"><div style="grid-column: span 2;">
+            <label>Modalità Guida</label>
+            <select id="chk_mode">
+                <option value="NORMAL">Normal</option>
+                <option value="ECO">Eco</option>
+                <option value="SPORT">Sport</option>
+                <option value="MISTO">Misto</option>
+            </select>
+        </div></div>
         <div class="grid"><div><label>Km Totali</label><input type="number" id="chk_km"></div><div><label>% Batteria</label><input type="number" id="chk_perc"></div></div>
         <button id="btnSalvaCheck" class="main-btn" style="background:var(--check)" onclick="salvaCheck()">📝 Registra Stato</button>
         <button id="btnAnnullaCheck" class="btn-cancel" onclick="annullaModificaCheck()">❌ Annulla</button>
@@ -170,8 +205,17 @@
     <div id="manutenzione" class="form-section">
         <input type="hidden" id="editMaintIndex" value="-1">
         <div class="grid"><div style="grid-column: span 2;"><label>Data</label><input type="date" id="man_data"></div></div>
+        <div class="grid"><div style="grid-column: span 2;"><label>Tipo</label>
+            <select id="man_tipo">
+                <option value="TAGLIANDO">Tagliando</option>
+                <option value="GOMME">Gomme</option>
+                <option value="TERGICRISTALLI">Tergicristalli</option>
+                <option value="LIQUIDI">Liquidi</option>
+                <option value="ALTRO">Altro</option>
+            </select>
+        </div></div>
         <div class="grid"><div><label>Costo (€)</label><input type="number" id="man_costo" step="0.01"></div><div><label>Km</label><input type="number" id="man_km"></div></div>
-        <div class="grid"><div style="grid-column: span 2;"><label>Note</label><textarea id="man_note"></textarea></div></div>
+        <div class="grid"><div style="grid-column: span 2;"><label>Note / Dettagli</label><textarea id="man_note"></textarea></div></div>
         <button id="btnSalvaMaint" class="main-btn" style="background:var(--maint)" onclick="salvaManutenzione()">🛠️ Registra</button>
         <button id="btnAnnullaMaint" class="btn-cancel" onclick="annullaModificaMaint()">❌ Annulla</button>
     </div>
@@ -180,21 +224,27 @@
         <div class="setup-box" style="background:#fff3e0; border-color:#ffe0b2;">
             <h3 style="margin-top:0; color:#ef6c00;">⚡ Stima Bolletta</h3>
             <div class="dispersion-box">
-                <label>Perdita Domestica (%)</label>
-                <input type="number" id="dispersionVal" value="15" step="0.1" style="width:70px;text-align:center;" onchange="updateDispersion()">
+                <label style="color:#ef6c00;">Perdita / Dispersione Ricarica Domestica (%)</label>
+                <input type="number" id="dispersionVal" value="15" step="0.1" style="width:80px;text-align:center;font-weight:bold" onchange="updateDispersion()">
             </div>
-            <table class="bill-table"><thead><tr><th>Mese</th><th>kWh Auto</th><th>kWh Rete</th><th>Costo</th></tr></thead><tbody id="billBody"></tbody></table>
+            <p style="font-size:0.7em; text-align:center; color:#888;">Modificando questo valore, tutto lo storico di spesa domestica si adatterà istantaneamente.</p>
+            <table class="bill-table"><thead><tr><th>Mese</th><th>kWh Auto</th><th>kWh Rete</th><th>Costo Mese</th></tr></thead><tbody id="billBody"></tbody></table>
         </div>
     </div>
 
     <div id="settings" class="form-section">
         <div class="setup-box">
-            <label>🔋 Capacità Batteria (kWh)</label><input type="number" id="conf_cap" step="0.1">
-            <label>⛽ Diesel (L/100km)</label><input type="number" id="conf_diesel_l100" step="0.1">
-            <label>🚙 Consumo EV (kWh/100km)</label><input type="number" id="conf_cons_ev" step="0.1">
+            <p style="font-size:0.8em; color:#555; margin-top:0;">Parametri Calcolo</p>
+            <div class="grid"><div><label>🔋 Capacità Batteria (kWh)</label><input type="number" id="conf_cap" step="0.1"></div></div>
+            <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
+            <label style="color:var(--expense); font-size:0.8em; font-weight:bold;">⛽ CONFRONTO TERMICO</label>
+            <div class="grid"><div><label>Litri/100km</label><input type="number" id="conf_diesel_l100" step="0.1"></div></div>
+            <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
+            <label style="color:var(--consumption); font-size:0.8em; font-weight:bold;">🚙 STIMA EV</label>
+            <div class="grid"><div><label>kWh/100km</label><input type="number" id="conf_cons_ev" step="0.1"></div></div>
         </div>
         <button class="main-btn" style="background:var(--setting)" onclick="salvaConfig()">💾 Salva Config</button>
-        <button class="main-btn" onclick="esportaExcel()" style="background: var(--excel);">📊 Esporta Backup</button>
+        <button class="main-btn" onclick="esportaExcel()" style="background: var(--excel);">📊 Export Backup</button>
     </div>
 </div>
 
@@ -202,23 +252,43 @@
     <div class="stats-summary">
         <div class="stat-small"><small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b></div>
         <div class="stat-small"><small>kWh/100km</small><br><b id="avgConsumo" style="color:var(--consumption)">---</b></div>
-        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b></div>
-        <div class="stat-small"><small>SPESA TOT.</small><br><b id="totSpesa" style="color:var(--expense)">€ 0.00</b></div>
+        <div class="stat-small"><small>TEMPO RIC.</small><br><b id="totTempo" style="color:var(--time)">0h 0m</b><span class="stat-detail">🏠<span id="tempoCasa">0h</span> | ⛽<span id="tempoCol">0h</span></span></div>
+        <div class="stat-small"><small id="labelAnnoKwh">kWh 2026</small><br><b id="totKwhAnno" style="color:var(--check)">0.0</b><span class="stat-detail">🏠<span id="totKwhCasa">0</span> | ⛽<span id="totKwhCol">0</span></span></div>
+        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b><span class="stat-detail">(vs Termico)</span></div>
+        <div class="stat-small"><small>SPESA TOT.</small><br><b id="totSpesa" style="color:var(--expense)">€ 0.00</b><span class="stat-detail">🏠€<span id="totSpesaCasa">0</span> | ⛽€<span id="totSpesaCol">0</span> | 🔧€<span id="totSpesaMan">0</span></span></div>
     </div>
     <div class="chart-container"><canvas id="savingsChart"></canvas></div>
     <div class="table-wrapper">
-        <table id="tabella"><thead><tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>Info</th><th>Orari</th><th>Spesa</th><th>Risp</th><th>Azioni</th></tr></thead><tbody></tbody></table>
+        <table id="tabella"><thead><tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>Info</th><th>Orari</th><th>Spesa</th><th>Risp</th><th>Act</th></tr></thead><tbody></tbody></table>
         <button id="btnShowMore" class="show-more-btn" onclick="toggleShowAll()">⬇️ Mostra tutto</button>
     </div>
     <div class="actions-footer">
-        <a href="https://ko-fi.com/briglucano" target="_blank" class="btn-caffe-large">☕ Offri un Caffè</a>
+        
+        <a href="https://ko-fi.com/briglucano" target="_blank" class="btn-caffe-large">
+            ☕ Offri un Caffè
+        </a>
+        
+        <div id="backupAlert" style="margin-top:10px;">Backup: Mai</div>
         <div class="btn-group">
+            <button class="btn-action" style="background:#546e7a" onclick="window.print()">📄 PDF</button>
             <button class="btn-action" style="background:var(--excel)" onclick="esportaExcel()">📊 Export</button>
             <button class="btn-action" style="background:var(--primary)" onclick="document.getElementById('fileInput').click()">📥 Import CSV</button>
             <input type="file" id="fileInput" style="display:none" accept=".csv" onchange="importaCSV(event)">
             <button style="background:none; border:none; color:red; font-size:0.7em;" onclick="pulisci()">Reset DB</button>
         </div>
     </div>
+</div>
+
+<div id="kofi-popup-overlay" class="kofi-overlay" style="display: none;">
+  <div class="kofi-box">
+    <span class="kofi-close" onclick="closeKofiPopup()">&times;</span>
+    <div class="kofi-content">
+      <h3>Ti piace la nostra App? 💙</h3>
+      <p>Se apprezzi il nostro lavoro, puoi supportarci con una piccola mancia simbolica. Ci aiuta a mantenere il servizio attivo!</p>
+      <a href="https://ko-fi.com/briglucano" target="_blank" class="kofi-popup-btn">☕ Offri un caffè allo staff!!!</a>
+      <p class="kofi-footer">Grazie per il supporto!</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -231,19 +301,26 @@ let showAllHistory = false;
 
 window.onload = function() {
     loadConfig();
+    
+    // Recupera la preferenza sulla dispersione (se precedentemente salvata)
     const savedDisp = localStorage.getItem('ev_dispersion_v2');
     if(savedDisp !== null) document.getElementById('dispersionVal').value = savedDisp;
+
     const today = new Date().toISOString().split('T')[0];
-    ['data_inserimento', 'chk_data', 'man_data'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = today; });
+    ['data_inserimento', 'chk_data', 'man_data'].forEach(id => document.getElementById(id).value = today);
     const pref = JSON.parse(localStorage.getItem('ev_pref_v5_5'));
     if(pref) {
-        document.getElementById('pLuce').value = pref.pL || '';
-        document.getElementById('pDiesel').value = pref.pD || '';
-        document.getElementById('pKw_stima').value = pref.pKw || 2.3;
-        document.getElementById('pKw_carica').value = pref.pKw || 2.3;
+        document.getElementById('pLuce').value = pref.pL || ''; document.getElementById('pDiesel').value = pref.pD || '';
+        document.getElementById('pKw_stima').value = pref.pKw || 2.3; document.getElementById('pKw_carica').value = pref.pKw || 2.3;
     }
     render();
+    
+    // Timer popup (30 secondi)
+    setTimeout(openKofiPopup, 30000);
 };
+
+function openKofiPopup() { document.getElementById('kofi-popup-overlay').style.display = 'flex'; }
+function closeKofiPopup() { document.getElementById('kofi-popup-overlay').style.display = 'none'; }
 
 function loadConfig() {
     appConfig = JSON.parse(localStorage.getItem(CONF_NAME)) || {...DEFAULT_CONFIG};
@@ -258,22 +335,24 @@ function salvaConfig() {
     appConfig.consTermico = parseFloat(document.getElementById('conf_diesel_l100').value) || 5.5;
     appConfig.consEv = parseFloat(document.getElementById('conf_cons_ev').value) || 15.5;
     localStorage.setItem(CONF_NAME, JSON.stringify(appConfig));
-    alert("Salvato!");
-}
-
-function parseLocalNum(str) {
-    if(!str) return 0;
-    let s = String(str).replace(/[€"'\s]/g, '').replace(',', '.');
-    return parseFloat(s) || 0;
+    alert("Salvato!"); loadConfig(); openTab('stima');
 }
 
 function openTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
-    const b = Array.from(document.querySelectorAll('.tab')).find(x => x.innerText.toLowerCase().includes(name.toLowerCase()));
-    if(b) b.classList.add('active');
+    const btns = document.querySelectorAll('.tab');
+    btns.forEach(b => { if(b.getAttribute('onclick').includes(name)) b.classList.add('active'); });
     document.getElementById(name).classList.add('active');
     if(name === 'bolletta') calcolaBolletta();
+}
+
+function parseLocalNum(str) {
+    if(!str) return 0;
+    let s = String(str).replace(/[€"'\s]/g, '');
+    if (s.indexOf(',') > -1 && s.indexOf('.') === -1) s = s.replace(',', '.');
+    else if (s.indexOf(',') > -1 && s.indexOf('.') > -1) s = s.replace(/\./g, '').replace(',', '.');
+    return parseFloat(s) || 0;
 }
 
 function syncPower(val) {
@@ -283,31 +362,40 @@ function syncPower(val) {
 }
 
 function stepPower(delta) {
-    let v = parseFloat(document.getElementById('pKw_stima').value) || 2.3;
-    syncPower((v + delta).toFixed(1));
+    let currentVal = parseLocalNum(document.getElementById('pKw_stima').value) || 1.4;
+    let newVal = Math.max(0.1, currentVal + delta).toFixed(1);
+    syncPower(newVal);
 }
 
 function calcolaStima() {
     const att = parseFloat(document.getElementById('s_att').value) || 0;
     const tar = parseFloat(document.getElementById('s_tar').value) || 0;
-    const kw = parseFloat(document.getElementById('pKw_stima').value) || 2.3;
+    const kw = parseLocalNum(document.getElementById('pKw_stima').value) || 1.4;
+    
     if (tar > att) {
         const kwh = appConfig.cap * (tar - att) / 100;
-        const oreDec = kwh / kw;
+        const oreDec = (kwh / kw); 
+        
         document.getElementById('resKwhStima').innerText = kwh.toFixed(1) + " kWh";
         document.getElementById('resTempo').innerText = Math.floor(oreDec) + "h " + Math.round((oreDec % 1)*60) + "m";
+        
         const orarioFine = document.getElementById('s_orario_fine').value;
         if (orarioFine) {
             const [h, m] = orarioFine.split(':').map(Number);
-            const d = new Date();
-            let target = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
-            if(target < d) target.setDate(target.getDate()+1);
-            const start = new Date(target.getTime() - (oreDec * 3600000));
-            document.getElementById('resOrarioAvvio').innerText = String(start.getHours()).padStart(2,'0') + ":" + String(start.getMinutes()).padStart(2,'0');
+            const now = new Date();
+            let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+            if(targetDate < now) targetDate.setDate(targetDate.getDate() + 1);
+            const startDate = new Date(targetDate.getTime() - (oreDec * 3600000));
+            document.getElementById('resOrarioAvvio').innerText = String(startDate.getHours()).padStart(2,'0') + ":" + String(startDate.getMinutes()).padStart(2,'0');
         }
+    } else {
+        document.getElementById('resKwhStima').innerText = "0 kWh"; 
+        document.getElementById('resTempo').innerText = "-"; 
+        document.getElementById('resOrarioAvvio').innerText = "--:--";
     }
 }
 
+function fmtMinuti(min) { return min ? `${Math.floor(min/60)}h ${min%60}m` : '-'; }
 function calcDiffMin(start, end) {
     if(!start || !end) return 0;
     const [h1, m1] = start.split(':').map(Number);
@@ -316,10 +404,36 @@ function calcDiffMin(start, end) {
     return diff < 0 ? diff + 1440 : diff;
 }
 
+// -------------------------------------------------------------
+// FUNZIONE CHE AGGIORNA TUTTO LO STORICO CON LA NUOVA DISPERSIONE
+// -------------------------------------------------------------
 function updateDispersion() {
-    localStorage.setItem('ev_dispersion_v2', document.getElementById('dispersionVal').value);
-    render();
-    calcolaBolletta();
+    const disp = parseFloat(document.getElementById('dispersionVal').value) || 15;
+    localStorage.setItem('ev_dispersion_v2', disp);
+    
+    let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
+    let isUpdated = false;
+    
+    h.forEach(r => {
+        // Applica retroattivamente la dispersione scelta a tutte le ricariche domestiche passate!
+        if (r.tipo === 'RICARICA' && r.luogo === 'DOMESTICA' && r.prezzoLuce && r.kwh) {
+            let kwhRete = r.kwh * (1 + (disp / 100)); // calcola energia reale presa dal contatore
+            r.spesa = kwhRete * r.prezzoLuce; // Nuova spesa reale
+            
+            // Ricalcola il risparmio usando la nuova spesa!
+            const kmTeorici = (r.kwh / appConfig.consEv) * 100;
+            const costoTermico = (kmTeorici / 100) * appConfig.consTermico * r.prezzoDiesel;
+            r.risp = costoTermico - r.spesa;
+            
+            isUpdated = true;
+        }
+    });
+    
+    if (isUpdated) {
+        localStorage.setItem(DB_NAME, JSON.stringify(h));
+        render(); // Aggiorna grafici e totale istantaneamente
+        calcolaBolletta(); // Aggiorna la tabella bolletta
+    }
 }
 
 function salvaRicarica() {
@@ -329,26 +443,38 @@ function salvaRicarica() {
     const km = parseFloat(document.getElementById('kmOdo').value);
     const pL = parseFloat(document.getElementById('pLuce').value);
     const pD = parseFloat(document.getElementById('pDiesel').value);
+    const pKw = document.getElementById('pKw_carica').value;
     const tStart = document.getElementById('t_start').value;
     const tEnd = document.getElementById('t_end').value;
     const luogo = document.querySelector('input[name="luogoRicarica"]:checked').value;
 
     if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti");
+
+    const kwh = appConfig.cap * (tar - att) / 100; // kWh netti immagazzinati
     
-    const kwh = appConfig.cap * (tar - att) / 100;
-    let kwhRete = (luogo === 'DOMESTICA') ? kwh * (1 + (parseFloat(document.getElementById('dispersionVal').value)/100)) : kwh / appConfig.efficienza;
-    const spesa = kwhRete * pL;
-    const risp = ((kwh / appConfig.consEv) * 100 / 100 * appConfig.consTermico * pD) - spesa;
+    // --- APPLICAZIONE DISPERSIONE DIRETTAMENTE NEL SALVATAGGIO ---
+    let kwhFatturati = kwh;
+    if (luogo === 'DOMESTICA') {
+        const disp = parseFloat(document.getElementById('dispersionVal').value) || 15;
+        kwhFatturati = kwh * (1 + (disp / 100)); // kWh reali prelevati dal contatore di casa
+    } else {
+        kwhFatturati = kwh / appConfig.efficienza; // Per colonnine manteniamo efficienza standard veicolo/colonna
+    }
 
-    const record = { 
-        tipo: 'RICARICA', luogo, isoDate: dataIn.toISOString(), 
-        data: dataIn.toLocaleDateString('it-IT'), km, batt: `${att}%→${tar}%`, 
-        c_att: att, c_tar: tar, t_start: tStart || '', t_end: tEnd || '', 
-        spesa, risp, kwh 
+    const spesa = kwhFatturati * pL; // Spesa già comprensiva di dispersione
+    const kmTeorici = (kwh / appConfig.consEv) * 100;
+    const costoTermico = (kmTeorici / 100) * appConfig.consTermico * pD;
+    const risp = costoTermico - spesa; // Risparmio "reale"
+
+    const record = {
+        tipo: 'RICARICA', luogo, isoDate: dataIn.toISOString(),
+        data: dataIn.toLocaleDateString('it-IT'), km,
+        batt: `${att}%→${tar}%`, c_att: att, c_tar: tar,
+        t_start: tStart, t_end: tEnd, tempo: fmtMinuti(calcDiffMin(tStart, tEnd)),
+        prezzoLuce: pL, prezzoDiesel: pD, pKw, spesa, risp, kwh
     };
-
     saveToDb(record, 'editIndex');
-    localStorage.setItem('ev_pref_v5_5', JSON.stringify({pL, pD, pKw: document.getElementById('pKw_carica').value}));
+    localStorage.setItem('ev_pref_v5_5', JSON.stringify({pL, pD, pKw}));
     annullaModifica();
 }
 
@@ -356,16 +482,27 @@ function salvaCheck() {
     const dataIn = document.getElementById('chk_data').valueAsDate || new Date();
     const km = parseFloat(document.getElementById('chk_km').value);
     const perc = document.getElementById('chk_perc').value;
-    const record = { tipo: 'CHECK', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'), km, batt: perc+"%", spesa:0, risp:0, kwh:0 };
+    const mode = document.getElementById('chk_mode').value;
+    if (isNaN(km)) return alert("Inserisci i Km");
+    const record = { 
+        tipo: 'CHECK', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'),
+        km, batt: perc+"%", chk_raw: perc, mode, spesa:0, risp:0, kwh:0
+    };
     saveToDb(record, 'editCheckIndex');
     annullaModificaCheck();
 }
 
 function salvaManutenzione() {
     const dataIn = document.getElementById('man_data').valueAsDate || new Date();
+    const tipo = document.getElementById('man_tipo').value;
     const costo = parseFloat(document.getElementById('man_costo').value);
     const km = parseFloat(document.getElementById('man_km').value);
-    const record = { tipo: 'MANUTENZIONE', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'), km: km||0, batt: document.getElementById('man_note').value, spesa: costo, risp: 0, kwh: 0 };
+    const note = document.getElementById('man_note').value;
+    if(isNaN(costo)) return alert("Inserisci il costo");
+    const record = {
+        tipo: 'MANUTENZIONE', isoDate: dataIn.toISOString(), data: dataIn.toLocaleDateString('it-IT'),
+        km: km || 0, man_tipo: tipo, spesa: costo, risp: 0, kwh: 0, note: note
+    };
     saveToDb(record, 'editMaintIndex');
     annullaModificaMaint();
 }
@@ -374,7 +511,10 @@ function saveToDb(record, indexFieldId) {
     let h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const idx = parseInt(document.getElementById(indexFieldId).value);
     if (idx > -1) h[idx] = record; else h.push(record);
-    h.sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate) || b.km - a.km);
+    h.sort((a, b) => {
+        if ((b.km||0) !== (a.km||0)) return (b.km||0) - (a.km||0);
+        return new Date(b.isoDate) - new Date(a.isoDate);
+    });
     localStorage.setItem(DB_NAME, JSON.stringify(h));
     render();
 }
@@ -382,133 +522,264 @@ function saveToDb(record, indexFieldId) {
 function render() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
     const tb = document.querySelector('#tabella tbody');
-    tb.innerHTML = '';
-    let tKm=0, tS=0, tR=0, tKwh=0;
-    
-    h.forEach((r, i) => {
-        if(i===0) tKm = r.km;
-        tS += (r.spesa||0); tR += (r.risp||0);
-        if(r.tipo==='RICARICA') tKwh += (r.kwh||0);
-    });
+    const curYear = new Date().getFullYear();
+    document.getElementById('labelAnnoKwh').innerText = "kWh " + curYear;
+    document.getElementById('backupAlert').innerText = "Backup: " + (localStorage.getItem('lastBackupDate') || "Mai");
 
-    const displayH = showAllHistory ? h : h.slice(0, 10);
-    displayH.forEach((r, i) => {
-        let diff = '-';
-        if (i < h.length - 1) {
-            const prev = h[i+1];
-            if (r.km && prev.km) diff = (r.km - prev.km);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    let kwhY=0, spesaTot=0, rispTot=0, totCasa=0, totCol=0, manutTot=0, minTot=0, minCasa=0, minCol=0, kwhCasa=0, kwhCol=0;
+    let chartLab=[], chartS=[], chartR=[];
+
+    [...h].reverse().forEach(r => {
+        if(r.tipo === 'RICARICA') {
+            spesaTot += (r.spesa||0); 
+            rispTot += (r.risp||0);
+            
+            let recordDate;
+            try { recordDate = new Date(r.isoDate); } catch(e){ recordDate = new Date(); }
+            
+            if (recordDate >= thirtyDaysAgo) {
+                chartLab.push(r.data.substring(0, 5)); 
+                chartS.push(r.spesa.toFixed(2));
+                chartR.push(r.risp.toFixed(2));
+            }
+            
+            let y = r.isoDate ? new Date(r.isoDate).getFullYear() : parseInt(r.data.split('/')[2]);
+            let isCurYear = (y === curYear);
+            if(isCurYear) kwhY += (r.kwh||0);
+
+            let mins = calcDiffMin(r.t_start, r.t_end);
+            minTot += mins;
+            if(r.luogo === 'COLONNINA') { totCol += r.spesa; minCol += mins; if(isCurYear) kwhCol += r.kwh; } 
+            else { totCasa += r.spesa; minCasa += mins; if(isCurYear) kwhCasa += r.kwh; }
+        } else if(r.tipo === 'MANUTENZIONE') {
+            manutTot += (r.spesa||0);
         }
-        const row = tb.insertRow();
-        row.innerHTML = `
-            <td>${r.data}</td>
-            <td>${r.tipo==='RICARICA'?(r.luogo==='DOMESTICA'?'🏠':'⛽'):r.tipo==='CHECK'?'📝':'🛠️'}</td>
-            <td>${r.km}</td>
-            <td>${diff}</td>
-            <td>${r.batt}</td>
-            <td>${r.t_start && r.t_end ? r.t_start+'-'+r.t_end : '-'}</td>
-            <td style="color:var(--expense)">€${r.spesa.toFixed(2)}</td>
-            <td style="color:var(--save)">€${r.risp.toFixed(2)}</td>
-            <td>
-                <button onclick="modifica(${i})" style="border:none;background:var(--edit);color:white;padding:4px 8px;border-radius:5px;">✏️</button>
-                <button onclick="elimina(${i})" style="border:none;background:#ff5252;color:white;padding:4px 8px;border-radius:5px;">🗑️</button>
-            </td>
-        `;
     });
 
-    document.getElementById('totKmReali').innerText = tKm.toLocaleString();
-    document.getElementById('totSpesa').innerText = '€ ' + tS.toFixed(2);
-    document.getElementById('totRisp').innerText = '€ ' + tR.toFixed(2);
+    updateChart(chartLab, chartS, chartR);
+
+    const limit = showAllHistory ? h.length : 10;
+    const btnMore = document.getElementById('btnShowMore');
+    btnMore.innerText = showAllHistory ? "⬆️ Riduci" : `⬇️ Mostra tutto (${h.length})`;
+    btnMore.style.display = h.length > 10 ? 'block' : 'none';
+
+    tb.innerHTML = h.slice(0, limit).map((r, i) => {
+        const idx = h.indexOf(r);
+        let diffKm = 0;
+        for(let k=idx+1; k<h.length; k++){ if(h[k].km > 0) { diffKm = r.km - h[k].km; break; } }
+
+        let badge = "", info = "", money = "";
+        if(r.tipo === 'RICARICA') {
+            let color = r.luogo === 'COLONNINA' ? '#e65100' : '#2e7d32';
+            badge = `<span style="background:${color}; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">${r.luogo === 'COLONNINA' ? 'COL' : 'HOME'}</span>`;
+            info = r.batt;
+            money = `<span style="color:var(--expense)">€${r.spesa.toFixed(2)}</span>`;
+        } else if (r.tipo === 'CHECK') {
+             const checkColors = { 'ECO': '#ce93d8', 'MISTO': '#ab47bc', 'NORMAL': '#8e24aa', 'SPORT': '#4a148c' };
+             badge = `<span style="background:${checkColors[r.mode]||'#6a1b9a'}; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">CHECK ${r.mode||''}</span>`;
+             info = `${r.batt}`;
+             money = "-";
+        } else {
+             badge = `<span style="background:var(--maint); color:#fff; padding:2px 6px; border-radius:4px; font-size:0.7em">FIX</span>`;
+             info = `${r.man_tipo}${r.note ? '<br><small><i>'+r.note+'</i></small>' : ''}`;
+             money = `<span style="color:var(--maint)">€${r.spesa.toFixed(2)}</span>`;
+        }
+
+        let rispStr = (r.tipo === 'RICARICA' && r.risp !== 0) ? `€${r.risp.toFixed(2)}` : '-';
+
+        return `<tr>
+            <td style="font-size:0.75em">${r.data}</td>
+            <td>${badge}</td>
+            <td><b>${r.km || ''}</b></td>
+            <td style="color:var(--accent); font-size:0.8em">${diffKm>0?'+'+diffKm:''}</td>
+            <td style="font-size:0.8em">${info}</td>
+            <td style="font-size:0.7em; color:#555">${r.t_start||''}<br>${r.t_end||''}</td>
+            <td>${money}</td>
+            <td style="font-weight:bold; font-size:0.8em; color:${r.risp>=0?'var(--save)':'var(--expense)'}">${rispStr}</td>
+            <td>
+                <button style="border:none;background:none;cursor:pointer" onclick="preparaModifica(${idx})">✏️</button>
+                <button style="border:none;background:none;color:red;cursor:pointer" onclick="elimina(${idx})">🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    let grandTotal = spesaTot + manutTot;
+
+    document.getElementById('totSpesa').innerText = "€ " + grandTotal.toFixed(2);
+    document.getElementById('totSpesaCasa').innerText = totCasa.toFixed(2);
+    document.getElementById('totSpesaCol').innerText = totCol.toFixed(2);
+    document.getElementById('totSpesaMan').innerText = manutTot.toFixed(2);
+
+    document.getElementById('totTempo').innerText = fmtMinuti(minTot);
+    document.getElementById('tempoCasa').innerText = fmtMinuti(minCasa);
+    document.getElementById('tempoCol').innerText = fmtMinuti(minCol);
+
+    document.getElementById('totRisp').innerText = "€ " + rispTot.toFixed(2);
     
-    if(h.length > 1){
-        const totalKm = h[0].km - h[h.length-1].km;
-        document.getElementById('avgConsumo').innerText = totalKm > 0 ? (tKwh / totalKm * 100).toFixed(1) : '---';
+    document.getElementById('totKwhAnno').innerText = kwhY.toFixed(1);
+    document.getElementById('totKwhCasa').innerText = kwhCasa.toFixed(1);
+    document.getElementById('totKwhCol').innerText = kwhCol.toFixed(1);
+    
+    document.getElementById('totKmReali').innerText = h[0]?.km || 0;
+    
+    let avg = "---";
+    const ricariche = h.filter(r => r.tipo === 'RICARICA');
+    if (ricariche.length >= 2) {
+        const dist = ricariche[0].km - ricariche[ricariche.length - 1].km;
+        let energy = 0;
+        for (let i = 0; i < ricariche.length - 1; i++) energy += (ricariche[i].kwh||0);
+        if (dist > 0) avg = ((energy / dist) * 100).toFixed(1);
     }
-    updateChart(h);
+    document.getElementById('avgConsumo').innerText = avg;
 }
 
-function updateChart(h) {
+function updateChart(l, s, r) {
     const ctx = document.getElementById('savingsChart').getContext('2d');
-    const last10 = h.filter(x => x.tipo==='RICARICA').slice(0, 10).reverse();
-    if (myChart) myChart.destroy();
+    if(myChart) myChart.destroy();
     myChart = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels: last10.map(x => x.data),
+        data: { 
+            labels: l, 
             datasets: [
-                { label: 'Spesa €', data: last10.map(x => x.spesa), backgroundColor: '#c62828' },
-                { label: 'Risp €', data: last10.map(x => x.risp), backgroundColor: '#2e7d32' }
-            ]
+                { label: 'Spesa (€)', data: s, backgroundColor: '#c62828', borderRadius: 3 }, 
+                { label: 'Risp. (€)', data: r, backgroundColor: '#2e7d32', borderRadius: 3 }
+            ] 
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: { 
+            maintainAspectRatio: false, 
+            plugins: { tooltip: { mode: 'index', intersect: false } },
+            scales: { x: { stacked: false }, y: { beginAtZero: true } }
+        }
     });
 }
-
-function modifica(i) {
-    const h = JSON.parse(localStorage.getItem(DB_NAME));
-    const r = h[i];
-    if(r.tipo==='RICARICA') {
-        openTab('carica'); document.getElementById('editIndex').value = i;
-        document.getElementById('kmOdo').value = r.km; document.getElementById('c_att').value = r.c_att; document.getElementById('c_tar').value = r.c_tar;
-        document.getElementById('t_start').value = r.t_start; document.getElementById('t_end').value = r.t_end;
-        toggleEdit('btnSalva', 'btnAnnulla', true);
-    }
-}
-
-function toggleEdit(s,c,on){ document.getElementById(s).innerText=on?"🔄 Aggiorna":"💾 Salva"; document.getElementById(c).style.display=on?'block':'none'; }
-function annullaModifica(){ document.getElementById('editIndex').value=-1; toggleEdit('btnSalva','btnAnnulla',false); }
-function annullaModificaCheck(){ document.getElementById('editCheckIndex').value=-1; }
-function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; }
 
 function calcolaBolletta() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    const dVal = parseFloat(document.getElementById('dispersionVal').value)/100;
-    const stats = {};
-    h.filter(x => x.tipo==='RICARICA' && x.luogo==='DOMESTICA').forEach(r => {
-        const d = new Date(r.isoDate);
-        const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-        if(!stats[key]) stats[key] = { kwh: 0, spesa: 0 };
-        stats[key].kwh += r.kwh;
-        stats[key].spesa += r.spesa;
+    const tbody = document.getElementById('billBody'); tbody.innerHTML = "";
+    let monthly = {};
+    
+    h.forEach(r => {
+        if(r.tipo === 'RICARICA' && r.luogo === 'DOMESTICA') {
+            let k = r.isoDate.substring(0, 7); 
+            if(!monthly[k]) monthly[k] = { kwh:0, spesa:0, kwhRete:0 };
+            
+            // Dato che la r.spesa include già la dispersione calcoliamo a ritroso i Kwh Rete usati per quella spesa
+            let calcKwhRete = r.spesa / r.prezzoLuce; 
+            if (!isFinite(calcKwhRete)) calcKwhRete = r.kwh;
+
+            monthly[k].kwh += r.kwh; 
+            monthly[k].kwhRete += calcKwhRete;
+            monthly[k].spesa += r.spesa;
+        }
     });
-    const body = document.getElementById('billBody');
-    body.innerHTML = '';
-    Object.keys(stats).sort().reverse().forEach(k => {
-        const row = body.insertRow();
-        row.innerHTML = `<td>${k}</td><td>${stats[k].kwh.toFixed(1)}</td><td>${(stats[k].kwh*(1+dVal)).toFixed(1)}</td><td style="color:var(--expense)">€${stats[k].spesa.toFixed(2)}</td>`;
+    
+    Object.keys(monthly).sort().reverse().forEach(k => {
+        let m = monthly[k]; 
+        let [y, mo] = k.split('-');
+        let name = new Date(y, mo-1).toLocaleString('it-IT', { month:'long', year:'numeric' });
+        tbody.innerHTML += `<tr><td style="text-transform:capitalize">${name}</td><td>${m.kwh.toFixed(1)}</td><td style="color:#ef6c00">${m.kwhRete.toFixed(1)}</td><td style="color:#2e7d32; font-weight:bold;">€${m.spesa.toFixed(2)}</td></tr>`;
     });
 }
 
 function esportaExcel() {
     const h = JSON.parse(localStorage.getItem(DB_NAME)) || [];
-    let csv = "Data;Tipo;Km;Info;Spesa;Risparmio;Kwh\n";
-    h.forEach(r => csv += `${r.data};${r.tipo};${r.km};${r.batt};${r.spesa.toFixed(2)};${r.risp.toFixed(2)};${r.kwh.toFixed(2)}\n`);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "EV_Monitor_Backup.csv";
-    link.click();
+    let csv = "IsoDate;Tipo;Km;Batt;Spesa;Risp;Luogo_ManTipo;Kwh;PrezzoLuce;PrezzoDiesel;PKw;T_Start;T_End;C_Att;C_Tar;Chk_Raw;Mode;Note\n";
+    h.forEach(r => {
+        const s = v => (v === undefined || v === null) ? '' : v;
+        csv += `${s(r.isoDate)};${s(r.tipo)};${s(r.km)};${s(r.batt)};${s(r.spesa)};${s(r.risp)};${s(r.luogo||r.man_tipo)};${s(r.kwh)};${s(r.prezzoLuce)};${s(r.prezzoDiesel)};${s(r.pKw)};${s(r.t_start)};${s(r.t_end)};${s(r.c_att)};${s(r.c_tar)};${s(r.chk_raw)};${s(r.mode)};${s(r.note)}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = "ev_backup_final.csv"; a.click();
+    localStorage.setItem('lastBackupDate', new Date().toLocaleDateString());
+    render();
 }
 
 function importaCSV(event) {
     const file = event.target.files[0];
+    if(!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-        const lines = e.target.result.split('\n');
-        const newDb = [];
-        for(let i=1; i<lines.length; i++) {
-            const c = lines[i].split(';');
-            if(c.length < 5) continue;
-            newDb.push({ data: c[0], tipo: c[1], km: parseFloat(c[2]), batt: c[3], spesa: parseLocalNum(c[4]), risp: parseLocalNum(c[5]), kwh: parseLocalNum(c[6]), isoDate: new Date().toISOString() });
+        const rows = e.target.result.split('\n');
+        if(rows.length < 2) return alert("File vuoto");
+        let imported = [];
+        for(let i=1; i<rows.length; i++) {
+            let row = rows[i].trim();
+            if(!row) continue;
+            let c = row.split(';');
+            
+            if(c.length < 5) continue; 
+            let tipo = c[1];
+            
+            let rec = {
+                isoDate: c[0] || new Date().toISOString(),
+                data: new Date(c[0]).toLocaleDateString('it-IT'),
+                tipo: tipo,
+                km: parseLocalNum(c[2]),
+                batt: c[3],
+                spesa: parseLocalNum(c[4]),
+                risp: parseLocalNum(c[5])
+            };
+
+            if(tipo === 'RICARICA') {
+                rec.luogo = c[6];
+                rec.kwh = parseLocalNum(c[7]);
+                rec.prezzoLuce = parseLocalNum(c[8]);
+                rec.prezzoDiesel = parseLocalNum(c[9]);
+                rec.pKw = c[10];
+                rec.t_start = c[11]; rec.t_end = c[12]; 
+                rec.tempo = fmtMinuti(calcDiffMin(c[11], c[12]));
+                
+                if(c[13]) rec.c_att = parseFloat(c[13]);
+                if(c[14]) rec.c_tar = parseFloat(c[14]);
+                if((!rec.c_att || !rec.c_tar) && c[3] && c[3].includes('→')) {
+                    let p = c[3].replace(/%/g,'').split(/→|->/);
+                    rec.c_att = parseFloat(p[0]); rec.c_tar = parseFloat(p[1]);
+                }
+
+            } else if (tipo === 'MANUTENZIONE') {
+                rec.man_tipo = c[6];
+                rec.note = c[17];
+            } else if (tipo === 'CHECK') {
+                rec.chk_raw = parseLocalNum(c[15]);
+                rec.mode = c[16] || 'NORMAL';
+            }
+            imported.push(rec);
         }
-        localStorage.setItem(DB_NAME, JSON.stringify(newDb));
-        render();
+        
+        if(imported.length > 0 && confirm(`Importare ${imported.length} record?`)) {
+             imported.sort((a,b) => (b.km - a.km) || (new Date(b.isoDate) - new Date(a.isoDate)));
+             localStorage.setItem(DB_NAME, JSON.stringify(imported));
+             alert("Importazione completata con successo!"); 
+             location.reload();
+        }
     };
     reader.readAsText(file);
 }
 
-function elimina(i){ if(confirm("Eliminare?")){ let h=JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME,JSON.stringify(h)); render(); } }
-function pulisci() { if(confirm("Resettare tutto?")) { localStorage.removeItem(DB_NAME); render(); } }
-function toggleShowAll() { showAllHistory = !showAllHistory; render(); }
+function preparaModifica(i) {
+    let h = JSON.parse(localStorage.getItem(DB_NAME)), r = h[i];
+    if(r.tipo==='RICARICA'){
+        openTab('carica'); document.getElementById('editIndex').value=i; document.getElementById('data_inserimento').value=r.isoDate.split('T')[0]; document.getElementById('kmOdo').value=r.km; document.getElementById('pLuce').value=r.prezzoLuce; document.getElementById('c_att').value=r.c_att; document.getElementById('c_tar').value=r.c_tar; toggleEdit('btnSalva','btnAnnulla',true);
+        document.getElementById('pKw_carica').value = r.pKw || '';
+    } else if(r.tipo==='MANUTENZIONE'){
+        openTab('manutenzione'); document.getElementById('editMaintIndex').value=i; document.getElementById('man_data').value=r.isoDate.split('T')[0]; document.getElementById('man_costo').value=r.spesa; document.getElementById('man_km').value=r.km; document.getElementById('man_note').value=r.note||''; toggleEdit('btnSalvaMaint','btnAnnullaMaint',true);
+    } else {
+        openTab('check'); document.getElementById('editCheckIndex').value=i; document.getElementById('chk_data').value=r.isoDate.split('T')[0]; document.getElementById('chk_km').value=r.km; document.getElementById('chk_perc').value=r.chk_raw; toggleEdit('btnSalvaCheck','btnAnnullaCheck',true);
+    }
+}
+function toggleEdit(s,c,on){ document.getElementById(s).innerText=on?"🔄 Aggiorna":"💾 Salva"; document.getElementById(c).style.display=on?'block':'none'; document.getElementById(s).classList.toggle('editing',on); }
+function annullaModifica(){ document.getElementById('editIndex').value=-1; toggleEdit('btnSalva','btnAnnulla',false); }
+function annullaModificaCheck(){ document.getElementById('editCheckIndex').value=-1; toggleEdit('btnSalvaCheck','btnAnnullaCheck',false); }
+function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value='';
+}
+function elimina(i){ if(confirm("Eliminare?")){ let h=JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME,JSON.stringify(h)); render(); calcolaBolletta(); }}
+function pulisci(){ if(confirm("Cancellare TUTTO?")){ localStorage.removeItem(DB_NAME); location.reload(); }}
+function toggleShowAll(){ showAllHistory=!showAllHistory; render(); }
 </script>
 </body>
 </html>
