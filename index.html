@@ -54,6 +54,10 @@
         .stat-detail { font-size: 0.7em; color: #666; margin-top: 3px; display: block; line-height: 1.2; font-weight: bold; }
         
         .chart-container { width: 100%; height: 300px; margin-bottom: 20px; }
+        
+        .filter-container { display: flex; justify-content: space-between; align-items: center; background: #f0f4f8; padding: 10px; border-radius: 10px; margin-bottom: 10px; }
+        .filter-container select { width: auto; padding: 6px 10px; border-radius: 8px; border: 1px solid #ccc; font-weight: bold; color: var(--primary); cursor: pointer; }
+        
         .table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.8em; min-width: 950px; }
         th { text-align: left; padding: 10px; background: #f8f9fa; border-bottom: 2px solid #eee; }
@@ -95,7 +99,7 @@
 
         @media print {
             body { background: white; padding: 0; }
-            .card, .tabs, .form-section, .actions-footer, .show-more-btn { display: none !important; }
+            .card, .tabs, .form-section, .actions-footer, .show-more-btn, .filter-container { display: none !important; }
             .history-card { box-shadow: none; border: none; max-width: 100%; padding: 0; margin: 0; }
             .table-wrapper { overflow: visible; }
             table { width: 100%; font-size: 9pt; border-collapse: collapse; }
@@ -169,8 +173,8 @@
         <div class="grid"><div style="grid-column: span 2;"><label>Km Totali</label><input type="number" id="kmOdo"></div></div>
         <div class="grid"><div><label>% Inizio</label><input type="number" id="c_att"></div><div><label>% Fine</label><input type="number" id="c_tar"></div></div>
         <div class="grid">
-            <div><label>🟢 Ora Inizio (Opz.)</label><input type="time" id="t_start"></div>
-            <div><label>🔴 Ora Fine (Opz.)</label><input type="time" id="t_end"></div>
+            <div><label>🟢 Ora Inizio</label><input type="time" id="t_start"></div>
+            <div><label>🔴 Ora Fine</label><input type="time" id="t_end"></div>
         </div>
         <div class="power-box">
             <label>⚡ Potenza (kW)</label>
@@ -239,9 +243,13 @@
             <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
             <label style="color:var(--expense); font-size:0.8em; font-weight:bold;">⛽ CONFRONTO TERMICO</label>
             <div class="grid"><div><label>Litri/100km</label><input type="number" id="conf_diesel_l100" step="0.1"></div></div>
-            <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
-            <label style="color:var(--consumption); font-size:0.8em; font-weight:bold;">🚙 STIMA EV</label>
-            <div class="grid"><div><label>kWh/100km</label><input type="number" id="conf_cons_ev" step="0.1"></div></div>
+            
+            <!-- STIMA EV NASCOSTA COME RICHIESTO -->
+            <div style="display:none;">
+                <hr style="border:0; border-top:1px solid #ccc; margin:10px 0;">
+                <label style="color:var(--consumption); font-size:0.8em; font-weight:bold;">🚙 STIMA EV</label>
+                <div class="grid"><div><label>kWh/100km</label><input type="number" id="conf_cons_ev" step="0.1"></div></div>
+            </div>
         </div>
         <button class="main-btn" style="background:var(--setting)" onclick="salvaConfig()">💾 Salva Config</button>
         <button class="main-btn" onclick="esportaExcel()" style="background: var(--excel);">📊 Export Backup</button>
@@ -252,16 +260,32 @@
     <div class="stats-summary">
         <div class="stat-small"><small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b></div>
         <div class="stat-small"><small>kWh/100km</small><br><b id="avgConsumo" style="color:var(--consumption)">---</b></div>
-        <div class="stat-small"><small>TEMPO RIC.</small><br><b id="totTempo" style="color:var(--time)">0h 0m</b><span class="stat-detail">🏠<span id="tempoCasa">0h</span> | ⛽<span id="tempoCol">0h</span></span></div>
+        <!-- TEMPO RIC. NASCOSTO COME RICHIESTO -->
+        <div class="stat-small" style="display:none;"><small>TEMPO RIC.</small><br><b id="totTempo" style="color:var(--time)">0h 0m</b><span class="stat-detail">🏠<span id="tempoCasa">0h</span> | ⛽<span id="tempoCol">0h</span></span></div>
+        
         <div class="stat-small"><small id="labelAnnoKwh">kWh 2026</small><br><b id="totKwhAnno" style="color:var(--check)">0.0</b><span class="stat-detail">🏠<span id="totKwhCasa">0</span> | ⛽<span id="totKwhCol">0</span></span></div>
         <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b><span class="stat-detail">(vs Termico)</span></div>
         <div class="stat-small"><small>SPESA TOT.</small><br><b id="totSpesa" style="color:var(--expense)">€ 0.00</b><span class="stat-detail">🏠€<span id="totSpesaCasa">0</span> | ⛽€<span id="totSpesaCol">0</span> | 🔧€<span id="totSpesaMan">0</span></span></div>
     </div>
+    
     <div class="chart-container"><canvas id="savingsChart"></canvas></div>
+    
+    <!-- FILTRO STORICO -->
+    <div class="filter-container">
+        <label style="font-size: 0.85em; font-weight: bold; color: #555;">🔍 Filtra Storico:</label>
+        <select id="historyFilter" onchange="render()">
+            <option value="ALL">📋 Tutti</option>
+            <option value="RICARICA">⚡ Ricariche</option>
+            <option value="MANUTENZIONE">🛠️ Manutenzioni</option>
+            <option value="CHECK">📝 Check (Stato)</option>
+        </select>
+    </div>
+
     <div class="table-wrapper">
         <table id="tabella"><thead><tr><th>Data</th><th>Tipo</th><th>Km</th><th>Diff</th><th>Info</th><th>Orari</th><th>Spesa</th><th>Risp</th><th>Act</th></tr></thead><tbody></tbody></table>
         <button id="btnShowMore" class="show-more-btn" onclick="toggleShowAll()">⬇️ Mostra tutto</button>
     </div>
+    
     <div class="actions-footer">
         
         <a href="https://ko-fi.com/briglucano" target="_blank" class="btn-caffe-large">
@@ -302,7 +326,6 @@ let showAllHistory = false;
 window.onload = function() {
     loadConfig();
     
-    // Recupera la preferenza sulla dispersione (se precedentemente salvata)
     const savedDisp = localStorage.getItem('ev_dispersion_v2');
     if(savedDisp !== null) document.getElementById('dispersionVal').value = savedDisp;
 
@@ -315,7 +338,6 @@ window.onload = function() {
     }
     render();
     
-    // Timer popup (30 secondi)
     setTimeout(openKofiPopup, 30000);
 };
 
@@ -326,7 +348,7 @@ function loadConfig() {
     appConfig = JSON.parse(localStorage.getItem(CONF_NAME)) || {...DEFAULT_CONFIG};
     document.getElementById('conf_cap').value = appConfig.cap;
     document.getElementById('conf_diesel_l100').value = appConfig.consTermico;
-    document.getElementById('conf_cons_ev').value = appConfig.consEv;
+    document.getElementById('conf_cons_ev').value = appConfig.consEv || 15.5;
     document.getElementById('lblModelBadge').innerText = `Batt: ${appConfig.cap} kWh`;
 }
 
@@ -404,9 +426,6 @@ function calcDiffMin(start, end) {
     return diff < 0 ? diff + 1440 : diff;
 }
 
-// -------------------------------------------------------------
-// FUNZIONE CHE AGGIORNA TUTTO LO STORICO CON LA NUOVA DISPERSIONE
-// -------------------------------------------------------------
 function updateDispersion() {
     const disp = parseFloat(document.getElementById('dispersionVal').value) || 15;
     localStorage.setItem('ev_dispersion_v2', disp);
@@ -415,12 +434,10 @@ function updateDispersion() {
     let isUpdated = false;
     
     h.forEach(r => {
-        // Applica retroattivamente la dispersione scelta a tutte le ricariche domestiche passate!
         if (r.tipo === 'RICARICA' && r.luogo === 'DOMESTICA' && r.prezzoLuce && r.kwh) {
-            let kwhRete = r.kwh * (1 + (disp / 100)); // calcola energia reale presa dal contatore
-            r.spesa = kwhRete * r.prezzoLuce; // Nuova spesa reale
+            let kwhRete = r.kwh * (1 + (disp / 100)); 
+            r.spesa = kwhRete * r.prezzoLuce; 
             
-            // Ricalcola il risparmio usando la nuova spesa!
             const kmTeorici = (r.kwh / appConfig.consEv) * 100;
             const costoTermico = (kmTeorici / 100) * appConfig.consTermico * r.prezzoDiesel;
             r.risp = costoTermico - r.spesa;
@@ -431,8 +448,8 @@ function updateDispersion() {
     
     if (isUpdated) {
         localStorage.setItem(DB_NAME, JSON.stringify(h));
-        render(); // Aggiorna grafici e totale istantaneamente
-        calcolaBolletta(); // Aggiorna la tabella bolletta
+        render(); 
+        calcolaBolletta(); 
     }
 }
 
@@ -450,21 +467,20 @@ function salvaRicarica() {
 
     if (isNaN(km) || isNaN(att) || isNaN(tar)) return alert("Dati mancanti");
 
-    const kwh = appConfig.cap * (tar - att) / 100; // kWh netti immagazzinati
+    const kwh = appConfig.cap * (tar - att) / 100; 
     
-    // --- APPLICAZIONE DISPERSIONE DIRETTAMENTE NEL SALVATAGGIO ---
     let kwhFatturati = kwh;
     if (luogo === 'DOMESTICA') {
         const disp = parseFloat(document.getElementById('dispersionVal').value) || 15;
-        kwhFatturati = kwh * (1 + (disp / 100)); // kWh reali prelevati dal contatore di casa
+        kwhFatturati = kwh * (1 + (disp / 100)); 
     } else {
-        kwhFatturati = kwh / appConfig.efficienza; // Per colonnine manteniamo efficienza standard veicolo/colonna
+        kwhFatturati = kwh / appConfig.efficienza; 
     }
 
-    const spesa = kwhFatturati * pL; // Spesa già comprensiva di dispersione
+    const spesa = kwhFatturati * pL; 
     const kmTeorici = (kwh / appConfig.consEv) * 100;
     const costoTermico = (kmTeorici / 100) * appConfig.consTermico * pD;
-    const risp = costoTermico - spesa; // Risparmio "reale"
+    const risp = costoTermico - spesa; 
 
     const record = {
         tipo: 'RICARICA', luogo, isoDate: dataIn.toISOString(),
@@ -532,6 +548,7 @@ function render() {
     let kwhY=0, spesaTot=0, rispTot=0, totCasa=0, totCol=0, manutTot=0, minTot=0, minCasa=0, minCol=0, kwhCasa=0, kwhCol=0;
     let chartLab=[], chartS=[], chartR=[];
 
+    // Calcolo Statistiche Principali (Usa sempre tutto lo storico, a prescindere dal filtro attivo)
     [...h].reverse().forEach(r => {
         if(r.tipo === 'RICARICA') {
             spesaTot += (r.spesa||0); 
@@ -561,15 +578,29 @@ function render() {
 
     updateChart(chartLab, chartS, chartR);
 
-    const limit = showAllHistory ? h.length : 10;
-    const btnMore = document.getElementById('btnShowMore');
-    btnMore.innerText = showAllHistory ? "⬆️ Riduci" : `⬇️ Mostra tutto (${h.length})`;
-    btnMore.style.display = h.length > 10 ? 'block' : 'none';
+    // Gestione del Filtro
+    const filterVal = document.getElementById('historyFilter') ? document.getElementById('historyFilter').value : 'ALL';
+    
+    // Associamo il record al suo indice originale prima di filtrare, così Modifica/Elimina non si spaccano
+    let mappedH = h.map((r, index) => { return { record: r, originalIndex: index }; });
+    
+    if (filterVal !== 'ALL') {
+        mappedH = mappedH.filter(item => item.record.tipo === filterVal);
+    }
 
-    tb.innerHTML = h.slice(0, limit).map((r, i) => {
-        const idx = h.indexOf(r);
+    const limit = showAllHistory ? mappedH.length : 10;
+    const btnMore = document.getElementById('btnShowMore');
+    btnMore.innerText = showAllHistory ? "⬆️ Riduci" : `⬇️ Mostra tutto (${mappedH.length})`;
+    btnMore.style.display = mappedH.length > 10 ? 'block' : 'none';
+
+    // Generazione della Tabella Filtrata
+    tb.innerHTML = mappedH.slice(0, limit).map((item) => {
+        const r = item.record;
+        const idx = item.originalIndex; // L'indice reale nel database per i bottoni
+        
+        // Calcolo della differenza KM (sempre confrontato col record reale successivo)
         let diffKm = 0;
-        for(let k=idx+1; k<h.length; k++){ if(h[k].km > 0) { diffKm = r.km - h[k].km; break; } }
+        for(let k = idx + 1; k < h.length; k++){ if(h[k].km > 0) { diffKm = r.km - h[k].km; break; } }
 
         let badge = "", info = "", money = "";
         if(r.tipo === 'RICARICA') {
@@ -596,7 +627,7 @@ function render() {
             <td><b>${r.km || ''}</b></td>
             <td style="color:var(--accent); font-size:0.8em">${diffKm>0?'+'+diffKm:''}</td>
             <td style="font-size:0.8em">${info}</td>
-            <td style="font-size:0.7em; color:#555">${(r.t_start && r.t_end) ? r.t_start + '<br>' + r.t_end : '-'}</td>
+            <td style="font-size:0.7em; color:#555">${r.t_start||''}<br>${r.t_end||''}</td>
             <td>${money}</td>
             <td style="font-weight:bold; font-size:0.8em; color:${r.risp>=0?'var(--save)':'var(--expense)'}">${rispStr}</td>
             <td>
@@ -606,6 +637,7 @@ function render() {
         </tr>`;
     }).join('');
 
+    // Aggiornamento Statistiche a schermo
     let grandTotal = spesaTot + manutTot;
 
     document.getElementById('totSpesa').innerText = "€ " + grandTotal.toFixed(2);
@@ -666,7 +698,6 @@ function calcolaBolletta() {
             let k = r.isoDate.substring(0, 7); 
             if(!monthly[k]) monthly[k] = { kwh:0, spesa:0, kwhRete:0 };
             
-            // Dato che la r.spesa include già la dispersione calcoliamo a ritroso i Kwh Rete usati per quella spesa
             let calcKwhRete = r.spesa / r.prezzoLuce; 
             if (!isFinite(calcKwhRete)) calcKwhRete = r.kwh;
 
@@ -775,8 +806,7 @@ function preparaModifica(i) {
 function toggleEdit(s,c,on){ document.getElementById(s).innerText=on?"🔄 Aggiorna":"💾 Salva"; document.getElementById(c).style.display=on?'block':'none'; document.getElementById(s).classList.toggle('editing',on); }
 function annullaModifica(){ document.getElementById('editIndex').value=-1; toggleEdit('btnSalva','btnAnnulla',false); }
 function annullaModificaCheck(){ document.getElementById('editCheckIndex').value=-1; toggleEdit('btnSalvaCheck','btnAnnullaCheck',false); }
-function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value='';
-}
+function annullaModificaMaint(){ document.getElementById('editMaintIndex').value=-1; toggleEdit('btnSalvaMaint','btnAnnullaMaint',false); document.getElementById('man_note').value=''; }
 function elimina(i){ if(confirm("Eliminare?")){ let h=JSON.parse(localStorage.getItem(DB_NAME)); h.splice(i,1); localStorage.setItem(DB_NAME,JSON.stringify(h)); render(); calcolaBolletta(); }}
 function pulisci(){ if(confirm("Cancellare TUTTO?")){ localStorage.removeItem(DB_NAME); location.reload(); }}
 function toggleShowAll(){ showAllHistory=!showAllHistory; render(); }
