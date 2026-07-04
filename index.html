@@ -49,9 +49,51 @@
         
         .history-card { background: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
         
-        .stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
-        .stat-small { background: #fff; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
-        .stat-detail { font-size: 0.7em; color: #666; margin-top: 3px; display: block; line-height: 1.2; font-weight: bold; }
+        .stats-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 colonne perfettamente uguali */
+    gap: 10px;                      /* Spazio uniforme tra i riquadri */
+    margin-bottom: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.stat-small {
+    background: #fff;
+    padding: 12px 8px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid #eee;
+    box-sizing: border-box;
+    
+    /* Forza tutti i riquadri ad avere la stessa altezza e centra il testo verticalmente */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 95px; /* Modifica questo valore se vuoi i riquadri più alti o più bassi */
+}
+
+.stat-small small {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.stat-small b {
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+
+.stat-detail {
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 4px;
+    display: block;
+    line-height: 1.2;
+    font-weight: bold;
+}
         
         .chart-container { width: 100%; height: 300px; margin-bottom: 20px; }
         
@@ -195,8 +237,8 @@
         <div class="grid"><div style="grid-column: span 2;">
             <label>Modalità Guida</label>
             <select id="chk_mode">
-                <option value="NORMAL">Normal</option>
                 <option value="ECO">Eco</option>
+                <option value="NORMAL">Normal</option>
                 <option value="SPORT">Sport</option>
                 <option value="MISTO">Misto</option>
             </select>
@@ -258,18 +300,41 @@
 
 <div class="history-card">
     <div class="stats-summary">
-        <div class="stat-small"><small>KM AUTO</small><br><b id="totKmReali" style="color:var(--accent)">0</b></div>
-        <div class="stat-small"><small>kWh/100km</small><br><b id="avgConsumo" style="color:var(--consumption)">---</b></div>
-        <!-- TEMPO RIC. NASCOSTO COME RICHIESTO -->
-        <div class="stat-small" style="display:none;"><small>TEMPO RIC.</small><br><b id="totTempo" style="color:var(--time)">0h 0m</b><span class="stat-detail">🏠<span id="tempoCasa">0h</span> | ⛽<span id="tempoCol">0h</span></span></div>
-        
-        <div class="stat-small"><small id="labelAnnoKwh">kWh 2026</small><br><b id="totKwhAnno" style="color:var(--check)">0.0</b><span class="stat-detail">🏠<span id="totKwhCasa">0</span> | ⛽<span id="totKwhCol">0</span></span></div>
-        <div class="stat-small"><small>RISPARMIO</small><br><b id="totRisp" style="color:var(--save)">€ 0.00</b><span class="stat-detail">(vs Termico)</span></div>
-        <div class="stat-small"><small>SPESA TOT.</small><br><b id="totSpesa" style="color:var(--expense)">€ 0.00</b><span class="stat-detail">🏠€<span id="totSpesaCasa">0</span> | ⛽€<span id="totSpesaCol">0</span> | 🔧€<span id="totSpesaMan">0</span></span></div>
+    <div class="stat-small">
+        <small>KM AUTO</small>
+        <b id="totKmReali" style="color:var(--accent)">0</b>
     </div>
     
-    <div class="chart-container"><canvas id="savingsChart"></canvas></div>
+    <div class="stat-small">
+        <small>kWh/100km</small>
+        <b id="avgConsumo" style="color:var(--consumption)">---</b>
+    </div>
     
+    <div class="stat-small">
+        <small id="labelAnnoKwh">kWh 2026</small>
+        <b id="totKwhAnno" style="color:var(--check)">0.0</b>
+        <span class="stat-detail">🏠 <span id="totKwhCasa">0</span> | ⛽ <span id="totKwhCol">0</span></span>
+    </div>
+    
+    <div class="stat-small">
+        <small>COSTO MEDIO kWh</small>
+        <b id="avgCostoKwh" style="color:var(--time)">€ 0.000</b>
+        <span class="stat-detail">🏠 €<span id="costoMedioCasa">0.000</span> | ⛽ €<span id="costoMedioCol">0.000</span></span>
+    </div>
+    
+    <div class="stat-small">
+        <small>SPESA TOT.</small>
+        <b id="totSpesa" style="color:var(--expense)">€ 0.00</b>
+        <span class="stat-detail">🏠 €<span id="totSpesaCasa">0</span> | ⛽ €<span id="totSpesaCol">0</span> | 🔧 €<span id="totSpesaMan">0</span></span>
+    </div>
+    
+    <div class="stat-small">
+        <small>RISPARMIO</small>
+        <b id="totRisp" style="color:var(--save)">€ 0.00</b>
+        <span class="stat-detail">(vs Termico)</span>
+    </div>
+</div>
+            
     <!-- FILTRO STORICO -->
     <div class="filter-container">
         <label style="font-size: 0.85em; font-weight: bold; color: #555;">🔍 Filtra Storico:</label>
@@ -546,6 +611,7 @@ function render() {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     let kwhY=0, spesaTot=0, rispTot=0, totCasa=0, totCol=0, manutTot=0, minTot=0, minCasa=0, minCol=0, kwhCasa=0, kwhCol=0;
+    let histKwhCasa=0, histKwhCol=0;
     let chartLab=[], chartS=[], chartR=[];
 
     // Calcolo Statistiche Principali (Usa sempre tutto lo storico, a prescindere dal filtro attivo)
@@ -569,8 +635,8 @@ function render() {
 
             let mins = calcDiffMin(r.t_start, r.t_end);
             minTot += mins;
-            if(r.luogo === 'COLONNINA') { totCol += r.spesa; minCol += mins; if(isCurYear) kwhCol += r.kwh; } 
-            else { totCasa += r.spesa; minCasa += mins; if(isCurYear) kwhCasa += r.kwh; }
+            if(r.luogo === 'COLONNINA') { totCol += r.spesa; minCol += mins; histKwhCol += (r.kwh||0); if(isCurYear) kwhCol += r.kwh; } 
+            else { totCasa += r.spesa; minCasa += mins; histKwhCasa += (r.kwh||0); if(isCurYear) kwhCasa += r.kwh; }
         } else if(r.tipo === 'MANUTENZIONE') {
             manutTot += (r.spesa||0);
         }
@@ -645,9 +711,15 @@ function render() {
     document.getElementById('totSpesaCol').innerText = totCol.toFixed(2);
     document.getElementById('totSpesaMan').innerText = manutTot.toFixed(2);
 
-    document.getElementById('totTempo').innerText = fmtMinuti(minTot);
-    document.getElementById('tempoCasa').innerText = fmtMinuti(minCasa);
-    document.getElementById('tempoCol').innerText = fmtMinuti(minCol);
+    // Cancella o sostituisci le tre righe di "totTempo", "tempoCasa" e "tempoCol" con questo:
+    let totalHistKwh = histKwhCasa + histKwhCol;
+    let avgKwhTotal = totalHistKwh > 0 ? (totCasa + totCol) / totalHistKwh : 0;
+    let avgKwhCasa = histKwhCasa > 0 ? totCasa / histKwhCasa : 0;
+    let avgKwhCol = histKwhCol > 0 ? totCol / histKwhCol : 0;
+
+    document.getElementById('avgCostoKwh').innerText = "€ " + avgKwhTotal.toFixed(3);
+    document.getElementById('costoMedioCasa').innerText = avgKwhCasa.toFixed(3);
+    document.getElementById('costoMedioCol').innerText = avgKwhCol.toFixed(3);
 
     document.getElementById('totRisp').innerText = "€ " + rispTot.toFixed(2);
     
